@@ -5,7 +5,7 @@ import App from './App';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <Suspense>
+  <Suspense fallback={<div style={{ padding: '20px', color: 'white', background: '#0a0a14', minHeight: '100vh' }}>Loading SAAN App...</div>}>
     <>
       <App />
     </>

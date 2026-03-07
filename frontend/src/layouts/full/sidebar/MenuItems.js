@@ -1,12 +1,11 @@
 import {
-  IconAperture,
-  IconCopy,
   IconLayoutDashboard,
-  IconLogin,
-  IconMoodHappy,
-  IconTypography,
-  IconUserPlus,
-  IconPlayerPlayFilled,
+  IconBook,
+  IconChartBar,
+  IconCirclePlus,
+  IconListCheck,
+  IconReportAnalytics,
+  IconLifebuoy,
 } from '@tabler/icons-react';
 
 import { uniqueId } from 'lodash';
@@ -16,7 +15,6 @@ const Menuitems = [
     navlabel: true,
     subheader: 'Home',
   },
-
   {
     id: uniqueId(),
     title: 'Dashboard',
@@ -30,14 +28,20 @@ const Menuitems = [
   {
     id: uniqueId(),
     title: 'Exams',
-    icon: IconTypography,
+    icon: IconBook,
     href: '/exam',
   },
   {
     id: uniqueId(),
-    title: 'Result',
-    icon: IconCopy,
-    href: '/result',
+    title: 'My Results',
+    icon: IconChartBar,
+    href: '/my-results',
+  },
+  {
+    id: uniqueId(),
+    title: 'Support',
+    icon: IconLifebuoy,
+    href: '/support',
   },
   {
     navlabel: true,
@@ -46,33 +50,21 @@ const Menuitems = [
   {
     id: uniqueId(),
     title: 'Create Exam',
-    icon: IconMoodHappy,
+    icon: IconCirclePlus,
     href: '/create-exam',
   },
   {
     id: uniqueId(),
     title: 'Add Questions',
-    icon: IconLogin,
+    icon: IconListCheck,
     href: '/add-questions',
   },
   {
     id: uniqueId(),
     title: 'Exam Logs',
-    icon: IconUserPlus,
+    icon: IconReportAnalytics,
     href: '/exam-log',
   },
-  // {
-  //   id: uniqueId(),
-  //   title: 'Exam  Sale comp',
-  //   icon: IconPlayerPlayFilled,
-  //   href: '/generate-report',
-  // },
-  // {
-  //   id: uniqueId(),
-  //   title: 'Sample Page',
-  //   icon: IconAperture,
-  //   href: '/sample-page',
-  // },
 ];
 
 export default Menuitems;

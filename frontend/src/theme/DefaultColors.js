@@ -6,14 +6,14 @@ const baselightTheme = createTheme({
   direction: 'ltr',
   palette: {
     primary: {
-      main: '#5D87FF',
-      light: '#ECF2FF',
-      dark: '#4570EA',
+      main: '#6C63FF',
+      light: '#EDE9FF',
+      dark: '#4B44CC',
     },
     secondary: {
-      main: '#49BEFF',
-      light: '#E8F7FF',
-      dark: '#23afdb',
+      main: '#00D4AA',
+      light: '#E0FBF4',
+      dark: '#009E7E',
     },
     success: {
       main: '#13DEB9',
@@ -28,9 +28,9 @@ const baselightTheme = createTheme({
       contrastText: '#ffffff',
     },
     error: {
-      main: '#FA896B',
-      light: '#FDEDE8',
-      dark: '#f3704d',
+      main: '#FF6B6B',
+      light: '#FFE8E8',
+      dark: '#CC3333',
       contrastText: '#ffffff',
     },
     warning: {
@@ -39,35 +39,85 @@ const baselightTheme = createTheme({
       dark: '#ae8e59',
       contrastText: '#ffffff',
     },
-    purple: {
-      A50: '#EBF3FE',
-      A100: '#6610f2',
-      A200: '#557fb9',
-    },
     grey: {
-      100: '#F2F6FA',
-      200: '#EAEFF4',
-      300: '#DFE5EF',
-      400: '#7C8FAC',
+      100: '#F8F9FE',
+      200: '#EEF0FF',
+      300: '#DDE1F5',
+      400: '#8891B0',
       500: '#5A6A85',
-      600: '#2A3547',
-
+      600: '#1A1D3B',
     },
     text: {
-      primary: '#2A3547',
+      primary: '#1A1D3B',
       secondary: '#5A6A85',
     },
     action: {
-      disabledBackground: 'rgba(73,82,88,0.12)',
-      hoverOpacity: 0.02,
-      hover: '#f6f9fc',
+      disabledBackground: 'rgba(108,99,255,0.08)',
+      hoverOpacity: 0.04,
+      hover: '#F0EEFF',
     },
-    divider: '#e5eaef',
+    divider: 'rgba(108,99,255,0.12)',
+    background: {
+      default: '#F8F9FE',
+      paper: '#FFFFFF',
+    },
   },
   typography,
-  shadows
-},
-  
-);
+  shadows,
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: '16px',
+          boxShadow: '0 2px 20px rgba(108,99,255,0.08)',
+          transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+          '&:hover': {
+            boxShadow: '0 8px 32px rgba(108,99,255,0.18)',
+            transform: 'translateY(-4px)',
+          },
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '10px',
+          fontWeight: 600,
+          transition: 'all 0.25s ease',
+        },
+        containedPrimary: {
+          background: 'linear-gradient(135deg, #6C63FF 0%, #4B44CC 100%)',
+          boxShadow: '0 4px 14px rgba(108,99,255,0.35)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #7D75FF 0%, #5D56DD 100%)',
+            boxShadow: '0 6px 20px rgba(108,99,255,0.45)',
+          },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: '8px',
+          fontWeight: 600,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: '16px',
+        },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '10px',
+        },
+      },
+    },
+  },
+});
 
 export { baselightTheme };

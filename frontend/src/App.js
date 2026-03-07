@@ -2,8 +2,9 @@
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { baselightTheme } from './theme/DefaultColors';
 // Router Provider
-import { RouterProvider, useRoutes } from 'react-router-dom';
+import { RouterProvider } from 'react-router-dom';
 import Router from './routes/Router';
+import AnimationStyles from './layouts/full/shared/AnimationStyles';
 
 // Redux Provider
 import { Provider } from 'react-redux';
@@ -20,6 +21,7 @@ function App() {
       <Provider store={store}>
         <ToastContainer />
         <CssBaseline />
+        <AnimationStyles />
         {/* {routing} */}
         <RouterProvider router={Router} />
       </Provider>

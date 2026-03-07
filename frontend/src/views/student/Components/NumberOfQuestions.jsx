@@ -1,86 +1,142 @@
 import React, { useEffect, useState } from 'react';
 import Grid from '@mui/material/Grid';
 import Avatar from '@mui/material/Avatar';
-import questions from './questionData';
-import BlankCard from 'src/components/shared/BlankCard';
 import { Box, Button, Stack, Typography } from '@mui/material';
-import Countdown from 'react-countdown';
-const NumberOfQuestions = ({ questionLength, submitTest, examDurationInSeconds }) => {
-  const totalQuestions = questionLength; //questions.length;
-  // Generate an array of question numbers from 1 to totalQuestions
-  const questionNumbers = Array.from({ length: totalQuestions }, (_, index) => index + 1);
-  const handleQuestionButtonClick = (questionNumber) => {
-    // Set the current question to the selected question number
-    // setCurrentQuestion(questionNumber);
-  };
 
-  // Create an array of rows, each containing up to 4 question numbers
+const NumberOfQuestions = ({
+  questionLength,
+  submitTest,
+  examDurationInSeconds,
+  initialSeconds,        // restored remaining time from checkpoint (0 = fresh start)
+  onTimerTick,           // (remainingSeconds) => void — updates parent ref every second
+  currentQuestionIndex,
+  setCurrentQuestionIndex,
+  questionStatus,
+  score,
+}) => {
+  const totalQuestions = questionLength;
+
+  const questionNumbers = Array.from(
+    { length: totalQuestions },
+    (_, index) => index + 1
+  );
+
   const rows = [];
   for (let i = 0; i < questionNumbers.length; i += 5) {
     rows.push(questionNumbers.slice(i, i + 5));
   }
 
-  // Timer related states
-  const [timer, setTimer] = useState(400); // Initialize timer with examDurationInSeconds
-  // Countdown timer
+  // ── Timer ─────────────────────────────────────────────────────────────────
+  const [timer, setTimer] = useState(0);
+
+  // Seed the timer — prefer checkpoint remaining time; fall back to full duration
   useEffect(() => {
-    setTimer(400);
-    const countdown = setInterval(() => {
-      setTimer((prevTimer) => prevTimer - 1);
+    if (initialSeconds > 0) {
+      setTimer(initialSeconds);          // restored from checkpoint
+    } else if (examDurationInSeconds > 0) {
+      setTimer(examDurationInSeconds);   // fresh exam start
+    }
+  }, [examDurationInSeconds, initialSeconds]);
+
+  // Tick every second
+  useEffect(() => {
+    if (!examDurationInSeconds) return;
+
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        const next = prev <= 1 ? 0 : prev - 1;
+        if (onTimerTick) onTimerTick(next);   // let TestPage always know latest value
+        if (next <= 0) {
+          clearInterval(interval);
+          submitTest();
+        }
+        return next;
+      });
     }, 1000);
 
-    // Check if the timer has reached 0
-    if (timer <= 0) {
-      clearInterval(countdown); // Stop the timer
-      submitTest(); // Automatically submit the test
-    }
+    return () => clearInterval(interval);
+  }, [examDurationInSeconds, initialSeconds]);
 
-    return () => {
-      clearInterval(countdown); // Cleanup the timer when the component unmounts
-    };
-  }, []); // Empty dependency array to run this effect only once when the component mounts
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // ✅ PROFESSIONAL COLOR LOGIC
+  const getQuestionColor = (index) => {
+    if (currentQuestionIndex === index) return '#1976d2'; // 🔵 Current
+
+    if (questionStatus[index]?.markedForReview) return '#fbc02d'; // 🟡 Review
+
+    if (questionStatus[index]?.answered) return '#2e7d32'; // 🟢 Answered
+
+    return '#d32f2f'; // 🔴 Not Answered
+  };
 
   return (
     <>
+      {/* Header */}
       <Box
         position="sticky"
         top="0"
         zIndex={1}
-        bgcolor="white" // Set background color as needed
-        paddingY="10px" // Add padding to top and bottom as needed
-        width="100%"
+        bgcolor="white"
+        py={2}
         px={3}
-        // mb={5}
+        width="100%"
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">Questions: 1/10</Typography>
           <Typography variant="h6">
-            Time Left: {Math.floor(timer / 60)}:{timer % 60}
+            Total Questions: {totalQuestions}
           </Typography>
+
+          <Typography
+            variant="h6"
+            color={timer < 60 ? 'error' : 'textPrimary'}
+            fontWeight="bold"
+          >
+            ⏳ Time Left: {formatTime(timer)}
+          </Typography>
+
           <Button variant="contained" onClick={submitTest} color="error">
             Finish Test
           </Button>
         </Stack>
+
+        <Stack direction="row" alignItems="center" justifyContent="flex-start" mt={1}>
+          <Typography variant="body1" fontWeight="bold">
+            Score: {score} / {totalQuestions}
+          </Typography>
+        </Stack>
       </Box>
 
-      <Box p={3} mt={5} maxHeight="270px">
+      {/* Legend */}
+      <Box px={3} mt={2}>
+        <Stack direction="row" spacing={2} mb={2}>
+          <Typography><span style={{ color: '#1976d2' }}>■</span> Current</Typography>
+          <Typography><span style={{ color: '#2e7d32' }}>■</span> Answered</Typography>
+          <Typography><span style={{ color: '#d32f2f' }}>■</span> Not Answered</Typography>
+          <Typography><span style={{ color: '#fbc02d' }}>■</span> Review</Typography>
+        </Stack>
+      </Box>
+
+      {/* Question Grid */}
+      <Box p={3} maxHeight="270px" overflow="auto">
         <Grid container spacing={1}>
           {rows.map((row, rowIndex) => (
             <Grid key={rowIndex} item xs={12}>
-              <Stack direction="row" alignItems="center" justifyContent="start">
+              <Stack direction="row">
                 {row.map((questionNumber) => (
                   <Avatar
                     key={questionNumber}
                     variant="rounded"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      fontSize: '20px',
+                    sx={{
+                      bgcolor: getQuestionColor(questionNumber - 1),
                       cursor: 'pointer',
-                      margin: '3px',
-                      background: '#ccc',
+                      border: currentQuestionIndex === questionNumber - 1 ? '2px solid white' : 'none'
                     }}
-                    onClick={() => handleQuestionButtonClick(questionNumber)}
+                    onClick={() => setCurrentQuestionIndex(questionNumber - 1)} // Enabled navigation
                   >
                     {questionNumber}
                   </Avatar>

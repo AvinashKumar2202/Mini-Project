@@ -13,7 +13,7 @@
     -->
 
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <!--
@@ -25,10 +25,25 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Modernize React App</title>
+    <title>ExamPortal – Online Assessment Platform</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    
+    <div id="global-error-log" style="display: none; color: #ff5555; background: #222; font-family: monospace; position: absolute; z-index: 99999; top: 0; left: 0; padding: 10px; width: 100%; white-space: pre-wrap; font-size: 14px;"></div>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        var el = document.getElementById('global-error-log');
+        el.style.display = 'block';
+        el.innerHTML += message + "\\n" + source + ":" + lineno + ":" + colno + "\\n\\n";
+      };
+      window.onunhandledrejection = function(event) {
+        var el = document.getElementById('global-error-log');
+        el.style.display = 'block';
+        el.innerHTML += "Unhandled Promise Rejection: " + (event.reason ? event.reason.toString() : 'Unknown Error') + "\\n\\n";
+      };
+    </script>
+
     <div id="root"></div>
     <!--
       This HTML file is a template.

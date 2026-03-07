@@ -35,6 +35,7 @@ const CreateExamPage = () => {
     duration: '',
     liveDate: '',
     deadDate: '',
+    requiresThirdEye: false,
   };
 
   const formik = useFormik({

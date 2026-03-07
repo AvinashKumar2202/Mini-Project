@@ -86,37 +86,30 @@ export default function Home({ cheatingLog, updateCheatingLog }) {
   }, []);
 
   return (
-    <Box>
-      <Card variant="outlined">
-        <Webcam
-          ref={webcamRef}
-          muted={true}
-          style={{
-            left: 0,
-            right: 0,
-            textAlign: 'center',
-            zindex: 9,
+    <>
+      <Webcam
+        ref={webcamRef}
+        muted={true}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          background: '#000'
+        }}
+      />
 
-            width: '100%',
-            height: '100%',
-          }}
-        />
-
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: 'absolute',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            left: 0,
-            right: 0,
-            textAlign: 'center',
-            zindex: 8,
-            width: 240,
-            height: 240,
-          }}
-        />
-      </Card>
-    </Box>
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 8,
+        }}
+      />
+    </>
   );
 }

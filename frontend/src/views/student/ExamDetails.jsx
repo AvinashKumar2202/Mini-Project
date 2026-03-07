@@ -5,13 +5,14 @@ import {
   Checkbox,
   FormControlLabel,
   List,
-  ListItem,
   ListItemText,
-  Radio,
   Stack,
   Typography,
+  GlobalStyles,
+  Box,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
+import { IconArrowLeft } from '@tabler/icons-react';
 import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import { uniqueId } from 'lodash';
@@ -19,64 +20,74 @@ import * as React from 'react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useGetQuestionsQuery } from 'src/slices/examApiSlice';
+import { useGetQuestionsQuery, useGetExamsQuery } from 'src/slices/examApiSlice';
 
-function Copyright(props) {
-  return (
-    <Typography variant="body2" color="text.secondary" align="center" {...props}>
-      {'Copyright © '}
-      <Link color="inherit" href="https://mui.com/">
-        Your Website
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  );
-}
+/* Hero image zoom animation */
+const ExamDetailsAnimStyles = () => (
+  <GlobalStyles
+    styles={{
+      '@keyframes heroZoom': {
+        from: { transform: 'scale(1.06)' },
+        to: { transform: 'scale(1)' },
+      },
+      '@keyframes startBtnGlow': {
+        '0%, 100%': { boxShadow: '0 0 0 0 rgba(108,99,255,0)' },
+        '50%': { boxShadow: '0 0 24px 8px rgba(108,99,255,0.50)' },
+      },
+    }}
+  />
+);
 
 const DescriptionAndInstructions = () => {
   const navigate = useNavigate();
 
   const { examId } = useParams();
-  const { data: questions, isLoading } = useGetQuestionsQuery(examId); // Fetch questions using examId
-  // const { data: questions, isLoading } = useGetQuestionsQuery({ examId });
+  const { data: questions, isLoading } = useGetQuestionsQuery(examId);
+  const { data: exams = [] } = useGetExamsQuery();
 
-  // fech exam data from backend
-  // pass testUnique id on start button
+  const currentExam = exams.find((e) => e._id === examId);
+  const questionCount = questions ? questions.length : 0;
+  const examDuration = currentExam?.duration || 0;
+  const examName = currentExam?.examName || 'Exam';
+
   const testId = uniqueId();
-  // accetp
   const [certify, setCertify] = useState(false);
   const handleCertifyChange = () => {
     setCertify(!certify);
   };
   const handleTest = () => {
-    // Check if the test date is valid here
-    const isValid = true; // Replace with your date validation logic
+    const isValid = true;
     console.log('Test link');
     if (isValid) {
-      // Replace 'examid' and 'TestId' with the actual values
       navigate(`/exam/${examId}/${testId}`);
     } else {
-      // Display an error message or handle invalid date
       toast.error('Test date is not valid.');
     }
   };
 
   return (
-    <Card>
+    <Card sx={{ animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) both' }}>
       <CardContent>
+        <Button
+          variant="text"
+          color="primary"
+          startIcon={<IconArrowLeft size={18} />}
+          onClick={() => navigate('/dashboard')}
+          sx={{ mb: 2 }}
+        >
+          Go Back
+        </Button>
         <Typography variant="h2" mb={3}>
-          Description
+          {examName}
         </Typography>
         <Typography>
-          This practice test will allow you to measure your Python skills at the beginner level by
+          This practice test will allow you to measure your skills by
           the way of various multiple choice questions. We recommend you to score at least 75% in
           this test before moving to the next level questionnaire. It will help you in identifying
-          your strength and development areas. Based on the same you can plan your next steps in
-          learning Python and preparing for job placements.
+          your strength and development areas.
         </Typography>
 
-        <Typography>#Python #Coding #Software #MCQ #Beginner #Programming Language</Typography>
+        <Typography mt={1}>#MCQ #OnlineExam #Proctored</Typography>
 
         <>
           <Typography variant="h3" mb={3} mt={3}>
@@ -94,8 +105,8 @@ const DescriptionAndInstructions = () => {
               <li>
                 <ListItemText>
                   <Typography variant="body1">
-                    There are a total of <strong>40 questions.</strong> Test Duration is{' '}
-                    <strong>30 minutes.</strong>
+                    There are a total of <strong>{questionCount} questions.</strong> Test Duration is{' '}
+                    <strong>{examDuration} minutes.</strong>
                   </Typography>
                 </ListItemText>
               </li>
@@ -173,8 +184,30 @@ const DescriptionAndInstructions = () => {
             control={<Checkbox checked={certify} onChange={handleCertifyChange} color="primary" />}
             label="I certify that I have carefully read and agree to all of the instructions mentioned above"
           />
-          <Button variant="contained" color="primary" disabled={!certify} onClick={handleTest}>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!certify}
+            onClick={handleTest}
+            sx={{
+              /* Animated glow pulse when enabled */
+              animation: certify ? 'startBtnGlow 1.8s ease-in-out infinite' : 'none',
+              transition: 'transform 0.18s ease',
+              '&:not(:disabled):hover': { transform: 'scale(1.04)' },
+              borderRadius: '12px',
+              px: 4,
+              py: 1.2,
+              fontWeight: 700,
+            }}
+          >
             Start Test
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate('/dashboard')}
+          >
+            Go Back
           </Button>
         </Stack>
       </CardContent>
@@ -188,6 +221,7 @@ const imgUrl =
 export default function ExamDetails() {
   return (
     <>
+      <ExamDetailsAnimStyles />
       <Grid container sx={{ height: '100vh' }}>
         <Grid
           item
@@ -195,14 +229,25 @@ export default function ExamDetails() {
           sm={4}
           md={7}
           sx={{
-            backgroundImage: `url(${imgUrl})`, // 'url(https://source.unsplash.com/random?wallpapers)',
-            backgroundRepeat: 'no-repeat',
+            overflow: 'hidden',
             backgroundColor: (t) =>
               t.palette.mode === 'light' ? t.palette.grey[50] : t.palette.grey[900],
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
           }}
-        />
+        >
+          {/* Hero image with zoom-in effect on load */}
+          <Box
+            component="img"
+            src={imgUrl}
+            alt="exam banner"
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              animation: 'heroZoom 1.2s cubic-bezier(0.22,1,0.36,1) forwards',
+              transformOrigin: 'center',
+            }}
+          />
+        </Grid>
         <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
           <DescriptionAndInstructions />
         </Grid>

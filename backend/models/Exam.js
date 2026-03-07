@@ -1,35 +1,56 @@
 import mongoose from "mongoose";
 
-const questionSchema = new mongoose.Schema({
-  questionText: {
+// restructure question schema to match frontend format
+const optionSchema = new mongoose.Schema({
+  optionText: {
     type: String,
-    required: true
+    required: true,
   },
-  options: {
-    type: [String],
-    required: true
+  isCorrect: {
+    type: Boolean,
+    required: true,
   },
-  correctAnswer: {
-    type: Number, // index of correct option
-    required: true
-  }
+});
+
+const questionSchema = new mongoose.Schema({
+  question: {
+    type: String,
+    required: true,
+  },
+  options: [optionSchema],
 });
 
 const examSchema = new mongoose.Schema(
   {
-    title: {
+    examName: {
       type: String,
       required: true
     },
+    totalQuestions: {
+      type: Number,
+      required: true
+    },
     duration: {
-      type: Number, // in minutes
+      type: Number,
+      required: true
+    },
+    liveDate: {
+      type: Date,
+      required: true
+    },
+    deadDate: {
+      type: Date,
       required: true
     },
     questions: [questionSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
-    }
+    },
+    requiresThirdEye: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

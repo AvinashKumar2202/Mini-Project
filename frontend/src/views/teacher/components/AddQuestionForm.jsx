@@ -8,9 +8,11 @@ import {
   Stack,
   Select,
   MenuItem,
+  Typography,
 } from '@mui/material';
 import swal from 'sweetalert';
 import { useCreateQuestionMutation, useGetExamsQuery } from 'src/slices/examApiSlice';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 
 const AddQuestionForm = () => {
@@ -18,7 +20,9 @@ const AddQuestionForm = () => {
   const [newQuestion, setNewQuestion] = useState('');
   const [newOptions, setNewOptions] = useState(['', '', '', '']);
   const [correctOptions, setCorrectOptions] = useState([false, false, false, false]);
-  const [selectedExamId, setSelectedExamId] = useState('');
+  const [selectedExamId, setSelectedExamId] = useState(null);
+
+  const { userInfo } = useSelector((state) => state.auth);
 
   const handleOptionChange = (index) => {
     const updatedCorrectOptions = [...correctOptions];
@@ -29,16 +33,39 @@ const AddQuestionForm = () => {
   const [createQuestion, { isLoading }] = useCreateQuestionMutation();
   const { data: examsData } = useGetExamsQuery();
 
+  // Filter to only show exams created by the current teacher, newest first
+  // Note: backend populates createdBy as an object { _id, name, email }
+  const myExams = examsData
+    ? [...examsData]
+      .filter((exam) => exam.createdBy?._id === userInfo?._id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    : [];
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   useEffect(() => {
-    if (examsData && examsData.length > 0) {
-      setSelectedExamId(examsData[0].examId);
-      console.log(examsData[0].examId, 'examsData[0].examId');
+    if (myExams.length > 0 && !selectedExamId) {
+      setSelectedExamId(myExams[0]._id);
     }
-  }, [examsData]);
+  }, [myExams, selectedExamId]);
 
   const handleAddQuestion = async () => {
     if (newQuestion.trim() === '' || newOptions.some((option) => option.trim() === '')) {
       swal('', 'Please fill out the question and all options.', 'error');
+      return;
+    }
+
+    if (!correctOptions.some((isCorrect) => isCorrect)) {
+      swal('', 'Please select at least one correct option before adding the question.', 'error');
       return;
     }
 
@@ -76,7 +103,7 @@ const AddQuestionForm = () => {
     <div>
       <Select
         label="Select Exam"
-        value={selectedExamId}
+        value={selectedExamId || ''}
         onChange={(e) => {
           console.log(e.target.value, 'option ID');
           setSelectedExamId(e.target.value);
@@ -84,12 +111,20 @@ const AddQuestionForm = () => {
         fullWidth
         sx={{ mb: 2 }}
       >
-        {examsData &&
-          examsData.map((exam) => (
-            <MenuItem key={exam.examId} value={exam.examId}>
-              {exam.examName}
+        {myExams.length === 0 ? (
+          <MenuItem disabled>No exams found. Create one first.</MenuItem>
+        ) : (
+          myExams.map((exam) => (
+            <MenuItem key={exam._id} value={exam._id}>
+              <Stack direction="column">
+                <Typography variant="body1">{exam.examName}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Created: {formatDate(exam.createdAt)}
+                </Typography>
+              </Stack>
             </MenuItem>
-          ))}
+          ))
+        )}
       </Select>
 
       {questions.map((questionObj, questionIndex) => (

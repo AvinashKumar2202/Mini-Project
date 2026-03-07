@@ -16,7 +16,7 @@ const AuthRegister = ({ formik, title, subtitle, subtext }) => {
 
       {subtext}
 
-      <Box component="form">
+      <Box component="form" onSubmit={handleSubmit}>
         <Stack mb={1}>
           <Typography
             variant="subtitle1"
@@ -40,7 +40,7 @@ const AuthRegister = ({ formik, title, subtitle, subtext }) => {
             // onChange={onNameChange} // Call the callback function on change
             fullWidth
             required
-            //   size="small"
+          //   size="small"
           />
 
           <Typography
@@ -65,8 +65,8 @@ const AuthRegister = ({ formik, title, subtitle, subtext }) => {
             helperText={touched.email && errors.email ? errors.email : null}
             required
             fullWidth
-            // onChange={onEmailChange} // Call the callback function on change
-            //   size="small"
+          // onChange={onEmailChange} // Call the callback function on change
+          //   size="small"
           />
 
           <Typography
@@ -91,36 +91,36 @@ const AuthRegister = ({ formik, title, subtitle, subtext }) => {
             helperText={touched.password && errors.password ? errors.password : null}
             required
             fullWidth
-            // onChange={onPasswordChange} // Call the callback function on change
-            //   size="small"
+          // onChange={onPasswordChange} // Call the callback function on change
+          //   size="small"
           />
           <Typography
             variant="subtitle1"
             fontWeight={600}
             component="label"
-            htmlFor="confirm_password"
+            htmlFor="confirmPassword"
             mb="5px"
             mt="10px"
           >
             Confirm Password
           </Typography>
           <CustomTextField
-            id="confirm_password"
-            name="confirm_password"
+            id="confirmPassword"
+            name="confirmPassword"
             type="password"
             autoComplete="false"
             variant="outlined"
-            value={values.confirm_password}
+            value={values.confirmPassword}
             onChange={handleChange}
             onBlur={handleBlur}
-            error={touched.confirm_password && errors.confirm_password ? true : false}
+            error={touched.confirmPassword && errors.confirmPassword ? true : false}
             helperText={
-              touched.confirm_password && errors.confirm_password ? errors.confirm_password : null
+              touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : null
             }
             fullWidth
             required
-            // onChange={onConfirmPasswordChange} // Call the callback function on change
-            //   size="small"
+          // onChange={onConfirmPasswordChange} // Call the callback function on change
+          //   size="small"
           />
           <Typography
             variant="subtitle1"
@@ -141,25 +141,21 @@ const AuthRegister = ({ formik, title, subtitle, subtext }) => {
             onChange={handleChange}
             onBlur={handleBlur}
             error={!!(touched.role && errors.role)}
-            // value={userRole}
-            // onChange={onRoleChange} // Call the callback function on change
-            // inputProps={{ 'aria-label': 'Without label' }}
-            //   size="small"
+          // value={userRole}
+          // onChange={onRoleChange} // Call the callback function on change
+          // inputProps={{ 'aria-label': 'Without label' }}
+          //   size="small"
           >
             <MenuItem value="student">Student</MenuItem>
             <MenuItem value="teacher">Teacher</MenuItem>
           </Select>
         </Stack>
         <Button
-          // size="small"
           color="primary"
           variant="contained"
           size="large"
           fullWidth
-          // component={Link}
-          // to="/auth/login"
-          onClick={handleSubmit}
-          // onClick={onSubmit} // Call the callback function on button click
+          type="submit"
         >
           Sign Up
         </Button>

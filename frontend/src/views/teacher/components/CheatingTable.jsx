@@ -18,17 +18,17 @@ import { useGetCheatingLogsQuery } from 'src/slices/cheatingLogApiSlice';
 
 export default function CheatingTable() {
   const [filter, setFilter] = useState('');
-  const [selectedExamId, setSelectedExamId] = useState('');
+  const [selectedExamId, setSelectedExamId] = useState(null);
   const [cheatingLogs, setCheatingLogs] = useState([]);
 
   const { data: examsData } = useGetExamsQuery();
   const { data: cheatingLogsData, isLoading } = useGetCheatingLogsQuery(selectedExamId);
 
   useEffect(() => {
-    if (examsData && examsData.length > 0) {
-      setSelectedExamId(examsData[0].examId);
+    if (examsData && examsData.length > 0 && !selectedExamId) {
+      setSelectedExamId(examsData[0]._id);
     }
-  }, [examsData]);
+  }, [examsData, selectedExamId]);
 
   useEffect(() => {
     if (cheatingLogsData) {
@@ -46,7 +46,7 @@ export default function CheatingTable() {
     <Box>
       <Select
         label="Select Exam"
-        value={selectedExamId}
+        value={selectedExamId || ''}
         onChange={(e) => {
           setSelectedExamId(e.target.value);
         }}
@@ -55,7 +55,7 @@ export default function CheatingTable() {
       >
         {examsData &&
           examsData.map((exam) => (
-            <MenuItem key={exam.examId} value={exam.examId}>
+            <MenuItem key={exam._id} value={exam._id}>
               {exam.examName}
             </MenuItem>
           ))}

@@ -11,29 +11,45 @@ const SidebarItems = () => {
   const { pathname } = useLocation();
   const pathDirect = pathname;
 
+  // Normalize role and add a fallback to prevent errors
+  const userRole = userInfo?.role?.toLowerCase();
+
   return (
     <Box sx={{ px: 3 }}>
       <List sx={{ pt: 0 }} className="sidebarNav">
         {Menuitems.map((item) => {
-          // Check if the user is a student and if the item should be hidden
+
+          // 1. FILTER FOR STUDENTS: Hide teacher-specific tools
           if (
-            userInfo.role === 'student' &&
+            userRole === 'student' &&
             ['Create Exam', 'Add Questions', 'Exam Logs'].includes(item.title)
           ) {
-            return null; // Don't render this menu item for students
+            return null;
           }
-          // {/********SubHeader**********/}
+
+          // 2. FILTER FOR TEACHERS: Hide student-specific tools
+          if (
+            userRole === 'teacher' &&
+            ['Exams', 'My Results'].includes(item.title)
+          ) {
+            return null;
+          }
+
+          // 3. HANDLE SUBHEADERS
           if (item.subheader) {
-            // Check if the user is a student and if the subheader should be hidden
-            if (userInfo.role === 'student' && item.subheader === 'Teacher') {
-              return null; // Don't render the "Teacher" subheader for students
+            // Hide "Teacher" header for students
+            if (userRole === 'student' && item.subheader === 'Teacher') {
+              return null;
+            }
+            // Hide "Student" header for teachers
+            if (userRole === 'teacher' && item.subheader === 'Student') {
+              return null;
             }
 
             return <NavGroup item={item} key={item.subheader} />;
 
-            // {/********If Sub Menu**********/}
-            /* eslint no-else-return: "off" */
           } else {
+            // 4. RENDER REMAINING ITEMS
             return <NavItem item={item} key={item.id} pathDirect={pathDirect} />;
           }
         })}
@@ -41,4 +57,5 @@ const SidebarItems = () => {
     </Box>
   );
 };
+
 export default SidebarItems;

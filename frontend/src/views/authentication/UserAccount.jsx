@@ -31,11 +31,11 @@ const UserAccount = () => {
   const { userInfo } = useSelector((state) => state.auth);
 
   const initialUserValues = {
-    name: userInfo.name || '',
-    email: userInfo.email || '',
-    password: userInfo.password || '',
+    name: userInfo?.name || '',
+    email: userInfo?.email || '',
+    password: userInfo?.password || '',
     confirm_password: '',
-    role: userInfo.role || 'student',
+    role: userInfo?.role || 'student',
   };
 
   const formik = useFormik({

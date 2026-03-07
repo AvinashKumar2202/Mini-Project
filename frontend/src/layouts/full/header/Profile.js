@@ -43,7 +43,7 @@ const Profile = () => {
       await logoutApiCall().unwrap();
       dispatch(logout());
       navigate('/auth/login');
-    } catch (err) {}
+    } catch (err) { }
   };
   return (
     <Box>
