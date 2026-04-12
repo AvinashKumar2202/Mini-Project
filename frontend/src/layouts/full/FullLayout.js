@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 
 import Header from './header/Header';
 import Sidebar from './sidebar/Sidebar';
+import SaanAIWidget from 'src/components/chat/SaanAIWidget';
 
 const MainWrapper = styled('div')(() => ({
   display: 'flex',
@@ -51,6 +52,7 @@ const FullLayout = () => {
           </Box>
         </Container>
       </PageWrapper>
+      <SaanAIWidget />
     </MainWrapper>
   );
 };

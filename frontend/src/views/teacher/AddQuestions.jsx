@@ -6,9 +6,8 @@ import AddQuestionForm from './components/AddQuestionForm';
 
 const AddQuestions = () => {
   return (
-    <PageContainer title="Add Questions Page" description="this is Add Questions page">
-      <DashboardCard title="Add Questions Page">
-        <Typography>This is a Add Questions page</Typography>
+    <PageContainer title="Manage Exam Questions" description="Add, import, and manage questions for your exams.">
+      <DashboardCard title="Question Management Center">
         <AddQuestionForm />
       </DashboardCard>
     </PageContainer>

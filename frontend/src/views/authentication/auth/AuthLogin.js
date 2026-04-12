@@ -33,13 +33,13 @@ const AuthLogin = ({ formik, title, subtitle, subtext }) => {
             htmlFor="username"
             mb="5px"
           >
-            Username
+            Username or Email
           </Typography>
           <CustomTextField
             id="username"
             name="email"
             variant="outlined"
-            placeholder="Enter Your Email"
+            placeholder="Enter Username or Email"
             value={values.email}
             onChange={handleChange}
             onBlur={handleBlur}

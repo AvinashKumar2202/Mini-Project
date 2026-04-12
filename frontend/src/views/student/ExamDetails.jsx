@@ -20,7 +20,8 @@ import * as React from 'react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useGetQuestionsQuery, useGetExamsQuery } from 'src/slices/examApiSlice';
+import { useGetQuestionsQuery, useGetExamsQuery, useGetMySubmissionsQuery } from 'src/slices/examApiSlice';
+import useBattery from 'src/hooks/useBattery';
 
 /* Hero image zoom animation */
 const ExamDetailsAnimStyles = () => (
@@ -44,17 +45,40 @@ const DescriptionAndInstructions = () => {
   const { examId } = useParams();
   const { data: questions, isLoading } = useGetQuestionsQuery(examId);
   const { data: exams = [] } = useGetExamsQuery();
+  const { data: submissions = [] } = useGetMySubmissionsQuery();
 
   const currentExam = exams.find((e) => e._id === examId);
   const questionCount = questions ? questions.length : 0;
   const examDuration = currentExam?.duration || 0;
   const examName = currentExam?.examName || 'Exam';
 
+  const userAttempts = submissions.filter((s) => (s.examId?._id || s.examId) === examId).length;
+  const allowedAttempts = currentExam?.allowedAttempts || 1;
+  const hasExhaustedAttempts = userAttempts >= allowedAttempts;
+
   const testId = uniqueId();
   const [certify, setCertify] = useState(false);
   const handleCertifyChange = () => {
     setCertify(!certify);
   };
+
+  const { batteryLevel, isCharging, supported: batterySupported } = useBattery();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const isBatterySafe = !batterySupported || batteryLevel === null || batteryLevel > 25 || isCharging;
+  const isSystemReady = isOnline && isBatterySafe && !hasExhaustedAttempts;
+
   const handleTest = () => {
     const isValid = true;
     console.log('Test link');
@@ -89,9 +113,30 @@ const DescriptionAndInstructions = () => {
 
         <Typography mt={1}>#MCQ #OnlineExam #Proctored</Typography>
 
+        {currentExam?.description && (
+          <Box mt={3} p={2} sx={{ bgcolor: 'rgba(108,99,255,0.05)', borderRadius: '8px', borderLeft: '4px solid #6C63FF' }}>
+            <Typography variant="h6" mb={1} color="primary">Exam Description</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {currentExam.description}
+            </Typography>
+          </Box>
+        )}
+
         <>
+          {hasExhaustedAttempts && (
+            <Box mt={3} p={2} sx={{ bgcolor: 'rgba(239, 68, 68, 0.05)', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
+              <Typography variant="h6" mb={1} color="error">Attempts Exhausted</Typography>
+              <Typography variant="body2">
+                You have already submitted this exam <strong>{userAttempts}</strong> time{userAttempts !== 1 ? 's' : ''}. You are not allowed to take it again because the maximum allowed attempts is <strong>{allowedAttempts}</strong>.
+              </Typography>
+            </Box>
+          )}
+
           <Typography variant="h3" mb={3} mt={3}>
             Test Instructions
+            <Box component="span" sx={{ float: 'right', fontSize: '1rem', fontWeight: 600, color: hasExhaustedAttempts ? 'error.main' : 'success.main', mt: 0.5 }}>
+              Attempts: {userAttempts} / {allowedAttempts}
+            </Box>
           </Typography>
           <List>
             <ol>
@@ -113,7 +158,11 @@ const DescriptionAndInstructions = () => {
               <li>
                 <ListItemText>
                   <Typography variant="body1">
-                    There is <strong>Negative Marking</strong> for wrong answers.
+                    {currentExam?.allowNegativeMarking ? (
+                      <>There is <strong>Negative Marking</strong> for wrong answers ({currentExam?.negativeMarks || 1} mark(s) deducted per wrong answer).</>
+                    ) : (
+                      <>There is <strong>No Negative Marking</strong> for wrong answers.</>
+                    )}
                   </Typography>
                 </ListItemText>
               </li>
@@ -172,6 +221,25 @@ const DescriptionAndInstructions = () => {
             </ol>
           </List>
         </>
+
+        <Typography variant="h3" mb={3} mt={3}>
+          System Pre-Check Validation
+        </Typography>
+        <Stack spacing={2} mb={3}>
+          <Box sx={{ p: 2, borderRadius: '10px', border: '1px solid', borderColor: isOnline ? 'success.main' : 'error.main', bgcolor: isOnline ? 'rgba(0,212,170,0.05)' : 'rgba(239,68,68,0.05)' }}>
+             <Typography fontWeight={700} color={isOnline ? 'success.main' : 'error.main'}>
+                Network Status: {isOnline ? 'Active (Connected)' : 'Disconnected (Offline)'}
+             </Typography>
+             {!isOnline && <Typography variant="caption" color="error">You must have an active internet connection to start the exam.</Typography>}
+          </Box>
+          <Box sx={{ p: 2, borderRadius: '10px', border: '1px solid', borderColor: isBatterySafe ? 'success.main' : 'error.main', bgcolor: isBatterySafe ? 'rgba(0,212,170,0.05)' : 'rgba(239,68,68,0.05)' }}>
+             <Typography fontWeight={700} color={isBatterySafe ? 'success.main' : 'error.main'}>
+                Battery Health: {batterySupported && batteryLevel !== null ? `${Math.round(batteryLevel)}% ${isCharging ? '(Charging)' : ''}` : 'Unknown (Supported)'}
+             </Typography>
+             {!isBatterySafe && <Typography variant="caption" color="error">Your battery is critically low (≤25%). Please plug in your charger to unlock the exam button.</Typography>}
+          </Box>
+        </Stack>
+
         <Typography variant="h3" mb={3} mt={3}>
           Confirmation
         </Typography>
@@ -187,11 +255,11 @@ const DescriptionAndInstructions = () => {
           <Button
             variant="contained"
             color="primary"
-            disabled={!certify}
+            disabled={!certify || !isSystemReady}
             onClick={handleTest}
             sx={{
               /* Animated glow pulse when enabled */
-              animation: certify ? 'startBtnGlow 1.8s ease-in-out infinite' : 'none',
+              animation: (certify && !hasExhaustedAttempts) ? 'startBtnGlow 1.8s ease-in-out infinite' : 'none',
               transition: 'transform 0.18s ease',
               '&:not(:disabled):hover': { transform: 'scale(1.04)' },
               borderRadius: '12px',

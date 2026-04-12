@@ -90,7 +90,7 @@ export default function CheatingTable() {
                 <TableCell>{log.noFaceCount}</TableCell>
                 <TableCell>{log.multipleFaceCount}</TableCell>
                 <TableCell>{log.cellPhoneCount}</TableCell>
-                <TableCell>{log.prohibitedObjectCount}</TableCell>
+                <TableCell>{log.prohibitedObjectCount || 0}</TableCell>
               </TableRow>
             ))}
           </TableBody>

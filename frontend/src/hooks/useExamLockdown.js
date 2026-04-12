@@ -11,6 +11,7 @@ const MAX_VIOLATIONS = 3;
 const useExamLockdown = (onAutoSubmit, isPaused = false) => {
     const [violations, setViolations] = useState(0);
     const [warningVisible, setWarningVisible] = useState(false);
+    const [isUrgentWarning, setIsUrgentWarning] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     const violationsRef = useRef(0);
@@ -61,10 +62,18 @@ const useExamLockdown = (onAutoSubmit, isPaused = false) => {
         violationsRef.current += 1;
         const newCount = violationsRef.current;
         setViolations(newCount);
+        
+        // Show urgent warning on the 2nd strike
+        if (newCount === MAX_VIOLATIONS - 1) {
+            setIsUrgentWarning(true);
+        }
+        
         setWarningVisible(true);
 
         if (newCount >= MAX_VIOLATIONS) {
             submittedRef.current = true;
+            setIsUrgentWarning(false); // Hide the modal while auto-submitting
+            setWarningVisible(false);
         }
 
         setTimeout(() => {
@@ -72,7 +81,7 @@ const useExamLockdown = (onAutoSubmit, isPaused = false) => {
             if (newCount >= MAX_VIOLATIONS && onAutoSubmitRef.current) {
                 onAutoSubmitRef.current();
             }
-        }, 1500);
+        }, 100);
     }, []); // no deps — reads everything from refs
 
     // ── Event handlers ────────────────────────────────────────────────────────
@@ -98,6 +107,28 @@ const useExamLockdown = (onAutoSubmit, isPaused = false) => {
         }
     }, [recordViolation]);
 
+    const handleContextMenu = useCallback((e) => {
+        if (lockdownActiveRef.current && !isPausedRef.current) {
+            e.preventDefault();
+        }
+    }, []);
+
+    const handleKeyDown = useCallback((e) => {
+        if (!lockdownActiveRef.current || isPausedRef.current) return;
+        
+        // F12 (DevTools)
+        if (e.key === 'F12') {
+            e.preventDefault();
+        }
+        // Ctrl/Cmd + Shift + I/J/C, Ctrl/Cmd + U, Ctrl/Cmd + C/V/P/S/X
+        if (e.ctrlKey || e.metaKey) {
+            const key = e.key.toLowerCase();
+            if (['i', 'j', 'u', 'c', 'v', 'p', 's', 'x'].includes(key)) {
+                e.preventDefault();
+            }
+        }
+    }, []);
+
     // ── Mount / Unmount ───────────────────────────────────────────────────────
 
     useEffect(() => {
@@ -114,6 +145,8 @@ const useExamLockdown = (onAutoSubmit, isPaused = false) => {
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('msfullscreenchange', handleFullscreenChange);
         document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('keydown', handleKeyDown);
         window.addEventListener('blur', handleBlur);
 
         return () => {
@@ -124,6 +157,8 @@ const useExamLockdown = (onAutoSubmit, isPaused = false) => {
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('msfullscreenchange', handleFullscreenChange);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('blur', handleBlur);
 
             if (isDocumentFullscreen() && document.exitFullscreen) {

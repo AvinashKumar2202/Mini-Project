@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Card, CardContent, Typography, Box, Stack, Button, IconButton
+  Card, CardContent, Typography, Box, Stack, Button, IconButton, TextField
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -18,6 +18,7 @@ export default function MultipleChoiceQuestion({
   setSelectedAnswers,
   questionStatus = [],
   setQuestionStatus,
+  submitTest,
 }) {
   const theme = useTheme();
 
@@ -120,8 +121,26 @@ export default function MultipleChoiceQuestion({
 
           {/* Options Grid */}
           <Stack spacing={2} mb={5}>
-            {currentQuestion.options.map((option) => {
-              const isSelected = selectedOptionId === option._id;
+            {currentQuestion.type === 'subjective' ? (
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                variant="outlined"
+                placeholder="Type your answer here..."
+                value={selectedAnswers[currentQuestionIndex] || ''}
+                onChange={(e) => handleOptionChange(e.target.value)}
+                sx={{
+                  bgcolor: 'background.paper',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '16px',
+                    fontSize: '1.1rem',
+                  }
+                }}
+              />
+            ) : (
+              currentQuestion.options.map((option) => {
+                const isSelected = selectedOptionId === option._id;
 
               return (
                 <Box
@@ -174,7 +193,8 @@ export default function MultipleChoiceQuestion({
                   </Typography>
                 </Box>
               );
-            })}
+            })
+            )}
           </Stack>
         </Box>
 
@@ -211,9 +231,8 @@ export default function MultipleChoiceQuestion({
 
           <Button
             variant="contained"
-            onClick={handleNextQuestion}
-            disabled={currentQuestionIndex === questions.length - 1}
-            endIcon={<ArrowForwardRoundedIcon />}
+            onClick={currentQuestionIndex === questions.length - 1 ? submitTest : handleNextQuestion}
+            endIcon={currentQuestionIndex === questions.length - 1 ? <CheckCircleRoundedIcon /> : <ArrowForwardRoundedIcon />}
             sx={{
               borderRadius: '24px',
               px: { xs: 4, sm: 4 },

@@ -5,13 +5,24 @@ const answerSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  questionType: {
+    type: String,
+    enum: ['objective', 'subjective'],
+    default: 'objective',
+  },
   selectedOptionId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+  },
+  answerText: {
+    type: String,
   },
   isCorrect: {
     type: Boolean,
     required: true,
+  },
+  aiGraded: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -53,7 +64,11 @@ const examSubmissionSchema = new mongoose.Schema(
       noFaceCount: { type: Number, default: 0 },
       multipleFaceCount: { type: Number, default: 0 },
       cellPhoneCount: { type: Number, default: 0 },
-      ProhibitedObjectCount: { type: Number, default: 0 },
+      prohibitedObjectCount: { type: Number, default: 0 },
+    },
+    trustScore: {
+      type: Number,
+      default: 100,
     },
     submittedAt: {
       type: Date,
@@ -62,6 +77,14 @@ const examSubmissionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// ── Indexes ────────────────────────────────────────────────────────────────────
+// Compound index for fetching a student's submissions (most common query pattern)
+examSubmissionSchema.index({ studentId: 1, submittedAt: -1 });
+// Compound index for teacher viewing all submissions for a given exam
+examSubmissionSchema.index({ examId: 1, submittedAt: -1 });
+// Index: allow fetching all submissions for a student-exam combination (since multiple attempts are supported)
+examSubmissionSchema.index({ examId: 1, studentId: 1 });
 
 const ExamSubmission = mongoose.model("ExamSubmission", examSubmissionSchema);
 export default ExamSubmission;

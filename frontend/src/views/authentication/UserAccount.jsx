@@ -25,6 +25,14 @@ const userValidationSchema = yup.object({
     .required('Confirm Password is required')
     .oneOf([yup.ref('password'), null], 'Password must match'),
   role: yup.string().oneOf(['student', 'teacher'], 'Invalid role').required('Role is required'),
+  universityId: yup.string().when('role', {
+    is: 'student',
+    then: () => yup.string().required('Student ID is required for a student profile')
+  }),
+  teacherId: yup.string().when('role', {
+    is: 'teacher',
+    then: () => yup.string().required('Teacher ID is required for a teacher profile')
+  }),
 });
 
 const UserAccount = () => {
@@ -36,6 +44,8 @@ const UserAccount = () => {
     password: userInfo?.password || '',
     confirm_password: '',
     role: userInfo?.role || 'student',
+    universityId: userInfo?.universityId || '',
+    teacherId: userInfo?.teacherId || '',
   };
 
   const formik = useFormik({
@@ -50,7 +60,7 @@ const UserAccount = () => {
 
   const [updateProfile, { isLoading }] = useUpdateUserMutation();
 
-  const handleSubmit = async ({ name, email, password, confirm_password, role }) => {
+  const handleSubmit = async ({ name, email, password, confirm_password, role, universityId, teacherId }) => {
     if (password !== confirm_password) {
       toast.error('Passwords do not match');
     } else {
@@ -61,6 +71,8 @@ const UserAccount = () => {
           email,
           password,
           role,
+          universityId: role === 'student' ? universityId : null,
+          teacherId: role === 'teacher' ? teacherId : null,
         }).unwrap();
         dispatch(setCredentials(res));
         toast.success('Profile updated successfully');

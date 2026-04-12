@@ -1,58 +1,75 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
+import http from "http";
+import os from "os";
+import cors from "cors";
+import compression from "compression";
+import { ExpressPeerServer } from "peer";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import examRoutes from "./routes/examRoutes.js";
-import cors from 'cors'
-import { ExpressPeerServer } from 'peer';
+import chatRoutes from "./routes/chatRoutes.js";
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
-
-// Load environment variables and connect to the database
-dotenv.config();
-//console.log("MONGO_URI =", process.env.MONGO_URI); // Debugging line to check if MONGO_URI is loaded correctly
+// Connect to the database
 connectDB();
 
 const app = express();
-app.use(cors());
-const port = process.env.PORT;
 
-// basic middleware
+// ── Middleware ────────────────────────────────────────────────────────────────
+app.use(compression());
+app.use(cors());
 app.use(express.json());
 
-//Routes
+// ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/users", userRoutes);
 app.use("/api/users/exam", examRoutes);
+app.use("/api/chat", chatRoutes);
 
-import os from 'os';
-
-// test route
+// Health-check / test route
 app.get("/", (req, res) => {
   res.send("Server running successfully");
 });
 
-// local ip route (for QR code generation so phones can connect)
+// Local IP route (for QR code generation so phones can connect)
 app.get("/api/config/ip", (req, res) => {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      // Skip internal and non-IPv4 addresses
-      if (iface.family === 'IPv4' && !iface.internal) {
+      if (iface.family === "IPv4" && !iface.internal) {
         return res.json({ ip: iface.address });
       }
     }
   }
-  res.json({ ip: 'localhost' });
+  res.json({ ip: "localhost" });
 });
 
-// start server
-const server = app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+// ── Server & PeerJS Initialization ───────────────────────────────────────────
+const port = process.env.PORT || 5001;
 
-// Configure PeerJS server
+// Create HTTP server to share between Express and PeerJS
+const server = http.createServer(app);
+
 const peerServer = ExpressPeerServer(server, {
-  debug: true,
-  path: '/'
+  debug: false,
+  path: "/",
 });
 
-app.use('/peerjs', peerServer);
+// Register the PeerJS middleware
+app.use("/peerjs", peerServer);
+
+// ── Global Error Handling ───────────────────────────────────────────────────
+app.use(notFound);
+app.use(errorHandler);
+
+// Start the integrated server
+server.listen(port, () => {
+  console.log(`Integrated Server running on http://localhost:${port}`);
+});
+
+// Robust timeouts
+server.keepAliveTimeout = 65000;
+server.headersTimeout  = 66000;
+// trigger restart

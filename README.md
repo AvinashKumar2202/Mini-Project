@@ -1,38 +1,28 @@
-# ProctoAI-MERN
+# Mini-Project: Automated Exam Proctoring System
 
-ProctoAI-MERN is an Automated Exam Proctoring System (AEPS) developed with cutting-edge AI-based algorithms for online exams. This comprehensive system is designed to ensure the integrity and security of online examinations. The project leverages technologies such as React.js, Redux, Node.js, and TensorFlow.js to offer a feature-rich exam proctoring solution.
+Mini-Project is an Automated Exam Proctoring System (AEPS) developed with cutting-edge AI-based algorithms for online exams. This comprehensive system is designed to ensure the integrity and security of online examinations. The project leverages technologies such as React.js, Redux, Node.js, Express.js, MongoDB, and TensorFlow.js to offer a feature-rich exam proctoring solution.
 
-![ProctoAI-MERN](readme-images/proctoai-mern.jpg)
+![Mini-Project](readme-images/proctoai-mern.jpg)
 
 ## Table of Contents
 
 - [Tech Stack](#tech-stack)
-
   - [Backend](#backend)
   - [Frontend](#frontend)
-
 - [Current Functionality](#current-functionality)
   - [User Authentication and Role Management](#user-authentication-and-role-management)
   - [Teacher Capabilities](#teacher-capabilities)
   - [Student Functionality](#student-functionality)
   - [AI Exam Proctoring](#ai-exam-proctoring)
 - [Future Scope](#future-scope)
-  - [Candidate Verification](#candidate-verification)
-  - [Voice Recognition](#voice-recognition)
-  - [Secure Exam Environment](#secure-exam-environment)
-  - [Unified Portal](#unified-portal)
 - [Project Screenshots](#project-screenshots)
-  - [Login Page](#login-page)
-  - [Teacher Dashboard](#teacher-dashboard)
-  - [Exam Page](#exam-page)
-  - [Cheat Log Dashboard](#cheat-log-dashboard)
 - [How to Run](#how-to-run)
 - [Contributors](#contributors)
 - [License](#license)
 
 ## Tech Stack
 
-ProctoAI-MERN utilizes a range of technologies to provide its comprehensive functionality. The key technologies and dependencies used in this project include:
+Mini-Project utilizes a range of technologies to provide its comprehensive functionality. The key technologies and dependencies used in this project include:
 
 ### Backend
 
@@ -42,143 +32,133 @@ ProctoAI-MERN utilizes a range of technologies to provide its comprehensive func
 - **Mongoose:** An elegant MongoDB object modeling tool.
 - **JSON Web Tokens (JWT):** Used for secure authentication and authorization.
 - **bcryptjs:** A library for securely hashing passwords.
-- **Express-Async-Handler:** Middleware to handle exceptions in asynchronous route handlers.
+- **PeerJS:** Used for WebRTC data and media connections.
+- **Nodemailer:** Used for sending emails.
 
 ### Frontend
 
 - **React:** A JavaScript library for building user interfaces.
 - **Redux Toolkit:** A library for state management in React applications.
-- **TensorFlow.js:** An open-source machine learning framework for web-based applications.
-- **Material-UI:** A popular React UI framework.
+- **TensorFlow.js:** An open-source machine learning framework for web-based proctoring capabilities.
+- **Material-UI (MUI):** A popular React UI framework.
 - **React-Router:** A routing library for React applications.
-- **React-Toastify:** Used for displaying notifications.
 - **React-Webcam:** A React component for capturing video from the user's webcam.
-- **Yup:** A JavaScript schema builder for value parsing and validation.
-- **Formik:** A library for building forms in React with form validation.
-- **SweetAlert:** A JavaScript library for creating beautiful and responsive alert messages.
+- **Formik & Yup:** Libraries for building forms with client-side validation.
+- **SweetAlert & React-Toastify:** For displaying notifications and alert messages.
 
 ## Current Functionality
 
 ### User Authentication and Role Management
 
-- Students and teachers can log in with separate roles and permissions.
-- Secure authentication and authorization for user accounts.
+- Students and teachers can log in with separate roles and authenticated permissions.
+- Secure token-based authentication (JWT) for user accounts.
 
 ### Teacher Capabilities
 
-- Teachers can create exams and define questions.
-- Exam management for teachers, including question creation and configuration.
+- Teachers can create and manage exams.
+- Add customizable questions with negative marking features or custom exam instructions.
+- Full access to the dashboard for reviewing student metrics and statistics.
 
 ### Student Functionality
 
-- Students can view available exams and participate in them.
-- The test page displays questions and a timer with an auto-submit feature.
+- Students can view available or assigned exams and participate in them securely.
+- Real-time test interface dynamically displaying questions, custom instructions, a live timer, and an auto-submit feature.
 
 ### AI Exam Proctoring
 
-- Real-time AI proctoring of students during exams.
-- AI checks for cheating behaviors, such as mobile phone detection, multiple faces detection, and absence of detected faces.
-- Cheating incidents are logged and viewable by teachers in their dashboard.
+- Real-time AI proctoring of students during exams via desktop and "Third Eye" mobile camera functionalities.
+- AI dynamically checks for cheating behaviors, such as mobile phone usage, multiple faces detection, and absence of detected faces.
+- Suspicious incidents are logged and continuously viewable by teachers in their specific dashboard.
 
 ## Future Scope
 
 ### Candidate Verification
 
-- Real-time candidate identity verification through image capture and matching with registered candidates.
+- Real-time identity verification prior to the exam start by validating the captured image against a registered profile.
 
 ### Voice Recognition
 
-- Utilization of voice recognition technology to monitor and identify voice anomalies during online exams, identifying potential malpractice.
+- Utilize voice recognition technology to monitor ambient room noise and identify voice anomalies during online exams, deterring potential collaboration.
 
 ### Secure Exam Environment
 
-- Preventing candidates from opening or accessing unauthorized applications on their desktop or mobile devices during the online exam.
+- Prevent candidates from opening or accessing unauthorized applications, browsing new tabs, or mitigating screen share risks on their devices during the exam.
 
 ### Unified Portal
 
-- Creation of a unified portal for users to log in, access question papers, open a chat window for communication with the examiner, and upload answer sheets via an integrated scanner within the portal.
+- Expand the platform into a unified portal with built-in chat, a resource repository, and direct answer sheet scanning utilizing WebRTC and mobile devices.
 
 ## Project Screenshots
 
-### Login Page
+### Login Interfaces
 
-- #### Student
+- **Student Login**
+  ![Student Login](readme-images/login-page-student.jpg)
 
-![Login Page](readme-images/login-page-student.jpg)
+- **Teacher Login**
+  ![Teacher Login](readme-images/login-page-teacher.jpg)
 
-- #### Teacher
+### Dashboards
 
-![Login Page](readme-images/login-page-teacher.jpg)
+- **Student Dashboard**
+  ![Student Dashboard](readme-images/student-dashboard.jpg)
 
-### Dashboard
-
-- #### Student
-
-![Student Dashboard](readme-images/student-dashboard.jpg)
-
-- #### Teacher
-
-![Teacher Dashboard](readme-images/teacher-dashboard.jpg)
+- **Teacher Dashboard**
+  ![Teacher Dashboard](readme-images/teacher-dashboard.jpg)
 
 ### Creating Exam Feature
 
-- #### Create Exam
+- **Create Exam Settings**
+  ![Create Exam](readme-images/create-exam.jpg)
 
-![Create Exam](readme-images/create-exam.jpg)
-
-- #### Success
-
-![Create Exam](readme-images/create-exam-success.jpg)
-
-- #### Create Questions
-
-![Create Questions](readme-images/create-question.jpg)
-
-### Exam Page
-
-![Exam Page](readme-images/exam-page.png)
+- **Create Questions**
+  ![Create Questions](readme-images/create-question.jpg)
 
 ### Cheating Detection During Exam
 
-- Webcam capture is hidden due to privacy reasons, with a black box covering the video feed.
+*Webcam capture is hidden due to privacy constraints, displaying a black box over the live video feed during demonstration.*
 
-#### Cell Phone Detection
+- **Cell Phone Detection**
+  ![Cell Phone Detection](readme-images/cell-phone-detection.png)
 
-![Cell Phone Detection](readme-images/cell-phone-detection.png)
+- **Prohibited Object Detection**
+  ![Prohibited Object Detection](readme-images/prohibited-object-detection.jpg)
 
-#### Prohibited Object Detection
+- **Face Not Visible Detection**
+  ![Face Not Visible Detection](readme-images/face-not-visible-detection.jpg)
 
-![Prohibited Object Detection](readme-images/prohibited-object-detection.jpg)
+### Examination Workflow
 
-#### Face Not Visible Detection
+- **Exam Warning Page**
+  ![Exam Page](readme-images/exam-page.png)
 
-![Cell Phone Detection](readme-images/face-not-visible-detection.jpg)
+- **Exam Started Dashboard**
+  ![Test Start](readme-images/test-start.jpg)
 
-### Test Page
-
-#### Start
-
-![Test Start](readme-images/test-start.jpg)
-
-#### Submitted
-
-![Test Submitted](readme-images/test-submitted.jpg)
-
-### Cheat Log Dashboard
-
-![Cheat Log Dashboard](readme-images/cheat-log-dashboard.png)
-
-More features and improvements are in development and will be included in future updates.
+- **Detailed Cheat Log Information**
+  ![Cheat Log Dashboard](readme-images/cheat-log-dashboard.png)
 
 ## How to Run
 
-To run this project locally, follow these steps:
+To run this project locally, follow these straightforward steps:
 
 1. Clone this repository.
-2. Install the required dependencies in both the frontend and backend folders.
-3. Start the server using `npm start` in the backend folder.
-4. Start the React app using `npm start` in the frontend folder.
+2. Ensure you have Node.js installed.
+3. Install dependencies sequentially:
+   - Root project: `npm install`
+   - Backend: `cd backend && npm install`
+   - Frontend: `cd ../frontend && npm install`
+4. Set up environment variables locally. Ensure your `.env` references the connection strings for MongoDB, JWT configurations, etc.
+5. In the root directory, run the comprehensive start command: `npm run dev` (this spins off both backend and frontend servers via concurrently).
+   - Alternatively, start independently:
+     - Backend: `cd backend && npm start`
+     - Frontend: `cd frontend && npm start`
+6. Access the application on `http://localhost:3000`.
 
 ## Contributors
 
-- [Mohd Zubair](https://github.com/mohdzubairshafi)
+- **Avinash Kumar** (AvinashKumar2202) and Team
+
+## License
+
+This project is intended for educational, portfolio, and demonstration purposes.

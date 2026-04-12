@@ -20,8 +20,10 @@ import { useGetExamsQuery, useGetQuestionsQuery, useSubmitExamMutation, useGetCo
 import { useSaveCheatingLogMutation } from 'src/slices/cheatingLogApiSlice';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
+import swal from 'sweetalert';
 import useExamLockdown from 'src/hooks/useExamLockdown';
 import useThirdEye from 'src/hooks/useThirdEye';
+import useBattery from 'src/hooks/useBattery';
 import { saveCheckpoint, loadCheckpoint, clearCheckpoint } from 'src/hooks/useExamCheckpoint';
 
 const TestPage = () => {
@@ -58,19 +60,40 @@ const TestPage = () => {
   const { userInfo } = useSelector((state) => state.auth);
   const [cheatingLog, setCheatingLog] = useState({
     noFaceCount: 0, multipleFaceCount: 0,
-    cellPhoneCount: 0, ProhibitedObjectCount: 0,
-    examId, username: '', email: '',
+    cellPhoneCount: 0, prohibitedObjectCount: 0,
+    examId, 
+    username: userInfo?.name || '', 
+    email: userInfo?.email || '',
   });
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [savedRemainingSeconds, setSavedRemainingSeconds] = useState(0);
   // Ref to always hold the latest timer value for checkpoint saves
   const liveRemainingSecondsRef = useRef(0);
 
+  // ── Network & Hardware State ─────────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [submissionPendingOffline, setSubmissionPendingOffline] = useState(false);
+  const { batteryLevel, isCharging, supported: batterySupported } = useBattery();
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // ── Report Issue ─────────────────────────────────────────────────────────
   const [reportOpen, setReportOpen] = useState(false);
   const [reportType, setReportType] = useState('');
   const [reportDesc, setReportDesc] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
+
+  // ── Instructions Dialog ──────────────────────────────────────────────────
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
 
   const handleReportSubmit = () => {
     if (!reportType) return;
@@ -98,7 +121,9 @@ const TestPage = () => {
 
   useEffect(() => {
     if (data) {
-      setQuestions(data);
+      // Use questions directly from the server — already shuffled and sliced (Source of Truth)
+      const finalQuestions = data;
+      setQuestions(finalQuestions);
 
       // ── Checkpoint restore ─────────────────────────────────────────
       const saved = loadCheckpoint(examId, userInfo?._id);
@@ -112,7 +137,7 @@ const TestPage = () => {
           setSavedRemainingSeconds(adjusted);
         }
         // Restore questionStatus from saved answers
-        setQuestionStatus(data.map((_, idx) => ({
+        setQuestionStatus(finalQuestions.map((_, idx) => ({
           answered: !!saved.selectedAnswers[idx],
           markedForReview: false,
         })));
@@ -121,21 +146,52 @@ const TestPage = () => {
         });
       } else {
         const initialAnswers = {};
-        data.forEach((_, idx) => { initialAnswers[idx] = null; });
+        finalQuestions.forEach((_, idx) => { initialAnswers[idx] = null; });
         setSelectedAnswers(initialAnswers);
-        setQuestionStatus(data.map(() => ({ answered: false, markedForReview: false })));
+        setQuestionStatus(finalQuestions.map(() => ({ answered: false, markedForReview: false })));
       }
     }
     // eslint-disable-next-line
   }, [data]);
 
+  useEffect(() => {
+    if (questionsError) {
+      const errMsg = questionsErrorData?.data?.message || questionsErrorData?.error || 'Failed to load questions.';
+      
+      swal({
+        title: "Access Denied",
+        text: errMsg,
+        icon: "error",
+        button: "Okay",
+      });
+
+      const timer = setTimeout(() => {
+        navigate(-1);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [questionsError, questionsErrorData, navigate]);
+
   const calculateScore = () => {
     let correctCount = 0;
     questions.forEach((question, index) => {
-      const selectedOptionId = selectedAnswers[index];
-      if (selectedOptionId) {
-        const correctOption = question.options.find((opt) => opt.isCorrect);
-        if (correctOption && correctOption._id === selectedOptionId) correctCount++;
+      const studentAnswer = selectedAnswers[index];
+      if (studentAnswer) {
+        if (question.type === 'subjective') {
+          if (studentAnswer.trim().toLowerCase() === (question.correctAnswerText || '').trim().toLowerCase()) {
+            correctCount++;
+          } else if (selectedExam?.allowNegativeMarking) {
+            correctCount -= (selectedExam.negativeMarks || 1);
+          }
+        } else {
+          const correctOption = question.options.find((opt) => opt.isCorrect);
+          if (correctOption && correctOption._id === studentAnswer) {
+            correctCount++;
+          } else if (selectedExam?.allowNegativeMarking) {
+            correctCount -= (selectedExam.negativeMarks || 1);
+          }
+        }
       }
     });
     setScore(correctCount);
@@ -153,27 +209,105 @@ const TestPage = () => {
     // eslint-disable-next-line
   }, [selectedAnswers, questions]);
 
+  // Auto-submit if connection comes back
+  useEffect(() => {
+     if (isOnline && submissionPendingOffline) {
+        toast.info('Connection restored. Submitting your exam...');
+        setSubmissionPendingOffline(false);
+        handleTestSubmission();
+     }
+     // eslint-disable-next-line
+  }, [isOnline, submissionPendingOffline]);
+
   const handleTestSubmission = async () => {
+    if (!isOnline) {
+      setSubmissionPendingOffline(true);
+      return;
+    }
+
+    if (!questions || questions.length === 0) {
+      toast.error('No questions found to submit.');
+      return;
+    }
+
     try {
       // Compute score fresh every time — never use stale state (critical for auto-submit)
       let freshScore = 0;
+      let correctAnswersCount = 0;
+      let incorrectAnswersCount = 0;
+      let unattemptedCount = 0;
+
       questions.forEach((question, index) => {
-        const selectedOptionId = selectedAnswers[index];
-        if (selectedOptionId) {
-          const correctOption = question.options.find((opt) => opt.isCorrect);
-          if (correctOption && correctOption._id === selectedOptionId) freshScore++;
+        const studentAnswer = selectedAnswers[index];
+        if (studentAnswer) {
+          if (question.type === 'subjective') {
+            if (studentAnswer.trim().toLowerCase() === (question.correctAnswerText || '').trim().toLowerCase()) {
+              freshScore++;
+              correctAnswersCount++;
+            } else {
+              if (selectedExam?.allowNegativeMarking) {
+                freshScore -= (selectedExam.negativeMarks || 1);
+              }
+              incorrectAnswersCount++;
+            }
+          } else {
+            const correctOption = question.options.find((opt) => opt.isCorrect);
+            if (correctOption && correctOption._id === studentAnswer) {
+              freshScore++;
+              correctAnswersCount++;
+            } else {
+              if (selectedExam?.allowNegativeMarking) {
+                freshScore -= (selectedExam.negativeMarks || 1);
+              }
+              incorrectAnswersCount++;
+            }
+          }
+        } else {
+          unattemptedCount++;
         }
       });
       setScore(freshScore);
 
-      const formattedAnswers = questions.map((question, index) => {
-        const selectedOptionId = selectedAnswers[index];
-        const selectedOption = question.options.find((opt) => opt._id === selectedOptionId);
+      const answerReport = questions.map((question, index) => {
+        const studentAnswer = selectedAnswers[index];
+        let status = 'Unattempted';
+        let detail = '';
+
+        if (!studentAnswer) {
+          status = 'Unattempted';
+        } else if (question.type === 'subjective') {
+           status = studentAnswer.trim().toLowerCase() === (question.correctAnswerText || '').trim().toLowerCase() ? 'Correct' : 'Incorrect';
+           detail = `Your answer: "${studentAnswer}" | Correct: "${question.correctAnswerText}"`;
+        } else {
+           const correctOption = question.options.find((opt) => opt.isCorrect);
+           status = (correctOption && correctOption._id === studentAnswer) ? 'Correct' : 'Incorrect';
+        }
+
         return {
-          questionIndex: index,
-          selectedOptionId: selectedOptionId || null,
-          isCorrect: selectedOption ? selectedOption.isCorrect : false,
+          status,
+          detail,
+          type: question.type || 'objective'
         };
+      });
+
+      const formattedAnswers = questions.map((question, index) => {
+        const studentAnswer = selectedAnswers[index];
+        if (question.type === 'subjective') {
+          return {
+            questionIndex: index,
+            questionType: 'subjective',
+            answerText: studentAnswer || '',
+            isCorrect: (studentAnswer || '').trim().toLowerCase() === (question.correctAnswerText || '').trim().toLowerCase(),
+          };
+        } else {
+          const selectedOption = question.options.find((opt) => opt._id === studentAnswer);
+          return {
+            questionIndex: index,
+            questionType: 'objective',
+            selectedOptionId: studentAnswer || null,
+            isCorrect: selectedOption ? selectedOption.isCorrect : false,
+          };
+        }
       });
 
       const submissionData = {
@@ -192,19 +326,31 @@ const TestPage = () => {
 
       toast.success('Test submitted successfully!');
       clearCheckpoint(examId, userInfo?._id);
+      sessionStorage.removeItem(`exam_seed_${examId}_${userInfo?._id}`);
       navigate('/result', {
         state: {
           score: freshScore,
           totalQuestions: questions.length,
           examName: selectedExam.examName,
           examDuration: selectedExam.duration,
+          correctAnswersCount,
+          incorrectAnswersCount,
+          unattemptedCount,
+          answerReport,
         },
       });
     } catch (error) {
       console.error('Submission error:', error);
+      // Critical check for network fetch failures
+      if (!navigator.onLine || error?.status === 'FETCH_ERROR') {
+          setSubmissionPendingOffline(true);
+          return;
+      }
+      
       // Even if backend fails, still navigate so student isn't stuck
       toast.error('Submission error — redirecting to results.');
       clearCheckpoint(examId, userInfo?._id);
+      sessionStorage.removeItem(`exam_seed_${examId}_${userInfo?._id}`);
       setTimeout(() => navigate('/'), 2000);
     }
   };
@@ -240,7 +386,7 @@ const TestPage = () => {
 
   // ── Fullscreen Lockdown ───────────────────────────────────────────────────
   // Pause violations while QR dialog is open so focus-steal doesn't = cheating
-  const { violations, maxViolations, warningVisible, dismissWarning } = useExamLockdown(
+  const { violations, maxViolations, warningVisible, isUrgentWarning, dismissWarning } = useExamLockdown(
     handleTestSubmission,
     showQrDialog, // isPaused
   );
@@ -249,9 +395,12 @@ const TestPage = () => {
   const answeredCount = Object.values(selectedAnswers).filter(Boolean).length;
   const totalQ = questions.length;
   const progressPct = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
+  
+  const isBatteryLow = batterySupported && batteryLevel !== null && batteryLevel <= 15 && !isCharging;
 
   return (
     <PageContainer title="Test" description="Exam in progress">
+      <Box sx={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>
       {/* ── Sticky Progress Bar ───────────────────────────────────── */}
       <Box
         sx={{
@@ -266,9 +415,20 @@ const TestPage = () => {
         <Stack direction="row" alignItems="center" spacing={2}>
           <Box flex={1}>
             <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                Questions Answered
-              </Typography>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Questions Answered
+                </Typography>
+                <Chip 
+                  label={isOnline ? 'Online' : 'Offline'} 
+                  size="small" 
+                  sx={{ 
+                    height: 20, fontSize: '0.65rem', fontWeight: 800,
+                    bgcolor: isOnline ? 'rgba(0,212,170,0.1)' : 'rgba(255,80,80,0.1)',
+                    color: isOnline ? '#00D4AA' : '#FF5050'
+                  }} 
+                />
+              </Stack>
               <Typography variant="caption" fontWeight={700} color="#6C63FF">
                 {answeredCount} / {totalQ}
               </Typography>
@@ -318,13 +478,14 @@ const TestPage = () => {
                   </Box>
                 ) : data && data.length > 0 ? (
                   <MultipleChoiceQuestion
-                    questions={data}
+                    questions={questions}
                     currentQuestionIndex={currentQuestionIndex}
                     setCurrentQuestionIndex={setCurrentQuestionIndex}
                     selectedAnswers={selectedAnswers}
                     setSelectedAnswers={setSelectedAnswers}
                     questionStatus={questionStatus}
                     setQuestionStatus={setQuestionStatus}
+                    submitTest={handleTestSubmission}
                   />
                 ) : (
                   <Box display="flex" justifyContent="center">No questions available for this exam.</Box>
@@ -339,8 +500,7 @@ const TestPage = () => {
               <Grid item xs={12}>
                 <BlankCard>
                   <Box
-                    maxHeight="300px"
-                    sx={{ display: 'flex', flexDirection: 'column', alignItems: 'start', justifyContent: 'center', overflowY: 'auto', height: '100%' }}
+                    sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', height: '100%' }}
                   >
                     <NumberOfQuestions
                       questionLength={questions.length}
@@ -354,6 +514,24 @@ const TestPage = () => {
                       score={score}
                     />
                     <Divider sx={{ width: '100%', my: 1.5, opacity: 0.5 }} />
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setInstructionsOpen(true)}
+                      sx={{
+                        color: '#6C63FF',
+                        borderColor: 'rgba(108,99,255,0.4)',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        textTransform: 'none',
+                        mx: 1.5, mb: 1,
+                        '&:hover': { bgcolor: 'rgba(108,99,255,0.08)', borderColor: '#6C63FF' },
+                      }}
+                    >
+                      ℹ️ View Instructions
+                    </Button>
                     <Button
                       fullWidth
                       variant="outlined"
@@ -438,7 +616,7 @@ const TestPage = () => {
                           id="third-eye-preview"
                           autoPlay playsInline muted
                           ref={(el) => { if (el && remoteStream) el.srcObject = remoteStream; }}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
                         />
                         <Box
                           sx={{
@@ -458,7 +636,7 @@ const TestPage = () => {
                         <Typography variant="caption" color="text.secondary" fontWeight={600} textAlign="center" px={1} sx={{ lineHeight: 1.1 }}>
                           {thirdEyeSkipped ? 'Third Eye Skipped' : 'Scan to activate'}
                         </Typography>
-                        {!thirdEyeSkipped && (
+                        {thirdEyeSkipped && (
                           <Button
                             size="small" variant="contained"
                             onClick={() => setThirdEyeSkipped(false)}
@@ -627,48 +805,41 @@ const TestPage = () => {
       <Dialog
         open={warningVisible && violations < maxViolations}
         disableEscapeKeyDown
-
         PaperProps={{
           sx: {
             borderRadius: '20px',
-            background: 'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)',
-            border: '2px solid rgba(255,80,80,0.5)',
-            boxShadow: '0 0 40px rgba(255,80,80,0.3)',
-            p: 1,
-            minWidth: 380,
+            background: isUrgentWarning 
+              ? 'linear-gradient(135deg,#420c0c 0%,#2c0a0a 100%)' 
+              : 'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)',
+            border: isUrgentWarning ? '2px solid #FF5050' : '1.5px solid rgba(108,99,255,0.3)',
+            boxShadow: isUrgentWarning ? '0 0 60px rgba(255,80,80,0.4)' : '0 0 50px rgba(108,99,255,0.2)',
+            minWidth: 380, maxWidth: 440,
           },
         }}
       >
-        <DialogContent>
-          <Stack alignItems="center" spacing={2.5} py={1}>
-            <Box
-              sx={{
-                width: 72, height: 72, borderRadius: '50%',
-                background: 'rgba(255,80,80,0.15)',
-                border: '2px solid rgba(255,80,80,0.4)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                animation: 'pulseGlow 1.5s ease-in-out infinite',
-              }}
-            >
-              <WarningAmberRoundedIcon sx={{ color: '#FF5050', fontSize: 40 }} />
-            </Box>
-
-            <Typography variant="h5" fontWeight={800} color="#fff" textAlign="center">
-              ⚠️ Exam Violation Detected
-            </Typography>
-
+        <DialogTitle sx={{ color: isUrgentWarning ? '#FF5050' : '#fff', fontWeight: 800, pb: 0, pt: 2.5, px: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <WarningAmberRoundedIcon sx={{ color: isUrgentWarning ? '#FF5050' : '#6C63FF', fontSize: 32 }} />
+            <Typography variant="h5" fontWeight={800}>{isUrgentWarning ? '🚨 FINAL WARNING' : 'Lockdown Violation'}</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pt: 2, pb: 1 }}>
+          <Stack alignItems="center" spacing={2.5}>
             <Alert
               severity="error"
               sx={{
-                bgcolor: 'rgba(255,80,80,0.12)',
-                border: '1px solid rgba(255,80,80,0.3)',
-                color: '#ffaaaa',
+                bgcolor: isUrgentWarning ? 'rgba(255,80,80,0.2)' : 'rgba(255,80,80,0.12)',
+                border: `1px solid ${isUrgentWarning ? '#FF5050' : 'rgba(255,80,80,0.3)'}`,
+                color: isUrgentWarning ? '#fff' : '#ffaaaa',
                 borderRadius: '12px',
                 width: '100%',
+                fontWeight: isUrgentWarning ? 700 : 400,
                 '& .MuiAlert-icon': { color: '#FF5050' },
               }}
             >
-              You left the exam window or exited fullscreen mode. This will be reported.
+              {isUrgentWarning 
+                ? "ONE MORE VIOLATION AND YOUR EXAM WILL BE AUTOMATICALLY SUBMITTED!" 
+                : "You left the exam window or exited fullscreen mode. This will be reported."}
             </Alert>
 
             <Stack direction="row" spacing={1.5} alignItems="center">
@@ -743,6 +914,47 @@ const TestPage = () => {
           </Stack>
         </DialogContent>
       </Dialog>
+      
+      {/* ── Exam Instructions Dialog ─────────────────────────────────────── */}
+      <Dialog
+        open={instructionsOpen}
+        onClose={() => setInstructionsOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)',
+            border: '1.5px solid rgba(108,99,255,0.3)',
+            boxShadow: '0 0 50px rgba(108,99,255,0.2)',
+            minWidth: 380, maxWidth: 500,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#fff', fontWeight: 800, pb: 1, pt: 2.5, px: 3 }}>
+          Exam Instructions
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pb: 3 }}>
+          {selectedExam?.description ? (
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.85)' }}>
+              {selectedExam.description}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="rgba(255,255,255,0.5)">
+              No special instructions for this exam.
+            </Typography>
+          )}
+          {selectedExam?.allowNegativeMarking && (
+            <Alert severity="warning" sx={{ mt: 2, borderRadius: '10px' }}>
+              <strong>Note:</strong> This exam has negative marking. 1 mark will be deducted for each incorrect answer.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setInstructionsOpen(false)} variant="contained" color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ── Report Issue Dialog ─────────────────────────────────────── */}
       <Dialog
         open={reportOpen}
@@ -863,6 +1075,72 @@ const TestPage = () => {
         )}
       </Dialog>
 
+      {/* ── Offline Synchronization Overlay ───────────────────────── */}
+      <Dialog
+        open={submissionPendingOffline}
+        disableEscapeKeyDown
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg,#0d0d1a 0%,#18182f 100%)',
+            border: '2px solid rgba(255,180,0,0.4)',
+            boxShadow: '0 0 60px rgba(255,180,0,0.2)',
+            p: 2,
+            minWidth: 400,
+          },
+        }}
+      >
+        <DialogContent>
+          <Stack alignItems="center" spacing={3}>
+            <CircularProgress sx={{ color: '#FFB300' }} size={60} thickness={4.5} />
+            <Typography variant="h5" fontWeight={800} color="#fff" textAlign="center">
+              Network Disconnected
+            </Typography>
+            <Alert
+              severity="warning"
+              sx={{ bgcolor: 'rgba(255,180,0,0.1)', color: '#ffe082', border: '1px solid rgba(255,180,0,0.3)' }}
+            >
+              Your timer has finished or you clicked submit, but you are completely offline! Your answers are <strong>securely saved</strong> locally. Do NOT close this tab until your connection is restored.
+            </Alert>
+            <Typography variant="caption" color="rgba(255,255,255,0.4)">
+              Waiting for internet to synchronize submission...
+            </Typography>
+          </Stack>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Battery Warning Overlay ───────────────────────────────── */}
+      <Dialog
+        open={isBatteryLow}
+        disableEscapeKeyDown
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg,#200b0f 0%,#2c1016 100%)',
+            border: '2px solid rgba(255,60,60,0.5)',
+            boxShadow: '0 0 60px rgba(255,60,60,0.3)',
+            p: 2,
+            minWidth: 380,
+          },
+        }}
+      >
+        <DialogContent>
+          <Stack alignItems="center" spacing={2}>
+            <WarningAmberRoundedIcon sx={{ fontSize: 56, color: '#ff4d4f', animation: 'pulseGlow 2s infinite' }} />
+            <Typography variant="h5" fontWeight={800} color="#fff" textAlign="center">
+              Battery Critically Low!
+            </Typography>
+            <Alert
+              severity="error"
+              sx={{ bgcolor: 'rgba(255,60,60,0.1)', color: '#ffcccc', border: '1px solid rgba(255,60,60,0.3)' }}
+            >
+              Your battery is dropping below 15%! Please connect your charger immediately. If your computer shuts down unexpectedly, your progress might not sync.
+            </Alert>
+          </Stack>
+        </DialogContent>
+      </Dialog>
+
+      </Box>
     </PageContainer>
   );
 };

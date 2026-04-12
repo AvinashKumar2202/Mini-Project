@@ -149,6 +149,63 @@ const AuthUpdate = ({ formik, title, subtitle, subtext }) => {
             <MenuItem value="student">Student</MenuItem>
             <MenuItem value="teacher">Teacher</MenuItem>
           </Select>
+
+          {values.role === 'student' && (
+            <>
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                component="label"
+                htmlFor="universityId"
+                mb="5px"
+                mt="25px"
+              >
+                Student UID
+              </Typography>
+              <CustomTextField
+                id="universityId"
+                name="universityId"
+                placeholder="Enter Your Student UID"
+                variant="outlined"
+                value={values.universityId || ''}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.universityId && errors.universityId ? true : false}
+                helperText={touched.universityId && errors.universityId ? errors.universityId : null}
+                fullWidth
+                required
+              />
+            </>
+          )}
+
+          {values.role === 'teacher' && (
+            <>
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                component="label"
+                htmlFor="teacherId"
+                mb="5px"
+                mt="25px"
+              >
+                Teacher ID
+              </Typography>
+              <CustomTextField
+                id="teacherId"
+                name="teacherId"
+                placeholder="Enter Your Teacher ID"
+                variant="outlined"
+                value={values.teacherId || ''}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.teacherId && errors.teacherId ? true : false}
+                helperText={touched.teacherId && errors.teacherId ? errors.teacherId : null}
+                fullWidth
+                required
+              />
+            </>
+          )}
+
         </Stack>
         <Button
           // size="small"

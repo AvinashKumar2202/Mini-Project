@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import {
     IconBook, IconChartBar, IconTrophy, IconCalendarEvent,
-    IconClockHour4, IconTrash, IconClock, IconCalendar, IconHelp,
+    IconClockHour4, IconTrash, IconClock, IconCalendar, IconHelp, IconEdit
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import PageContainer from 'src/components/container/PageContainer';
@@ -13,6 +13,7 @@ import { useSelector } from 'react-redux';
 import { useGetMySubmissionsQuery, useGetExamsQuery, useDeleteExamMutation } from 'src/slices/examApiSlice';
 import { startCase } from 'lodash';
 import swal from 'sweetalert';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 /* ─── Animated count-up hook ────────────────────────────────────────── */
 function useCountUp(target, duration = 1200) {
@@ -146,7 +147,7 @@ const StatCard = ({ label, value, icon: Icon, gradient, delay = 0 }) => {
 
 /* ─── Result Row ─────────────────────────────────────────────────────── */
 const ResultRow = ({ sub, idx }) => {
-    const isPassed = sub.score >= Math.ceil((sub.totalQuestions * 60) / 100);
+    const isPassed = sub.score >= Math.ceil((sub.totalQuestions * 40) / 100);
     return (
         <Stack
             direction="row"
@@ -182,9 +183,11 @@ const ResultRow = ({ sub, idx }) => {
                 </Box>
             </Stack>
             <Stack alignItems="flex-end">
-                <Typography variant="subtitle2" fontWeight={700}>{sub.score}/{sub.totalQuestions}</Typography>
+                <Typography variant="subtitle2" fontWeight={700}>
+                    {Number.isInteger(sub.score) ? sub.score : Number(sub.score).toFixed(2)}/{sub.totalQuestions}
+                </Typography>
                 <Chip
-                    label={`${sub.percentage}%`}
+                    label={`${Number.isInteger(sub.percentage) ? sub.percentage : Number(sub.percentage).toFixed(2)}%`}
                     size="small"
                     sx={{
                         bgcolor: isPassed ? 'rgba(0,212,170,0.12)' : 'rgba(255,107,107,0.12)',
@@ -219,7 +222,40 @@ const Dashboard = () => {
         ? Math.round(submissions.reduce((s, r) => s + (r.percentage || 0), 0) / submissions.length)
         : 0;
 
-    const recent = [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 5);
+    const recent = [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+    // Group submissions by unique subjects to prevent data duplicacy
+    const subjectMap = {};
+    submissions.forEach((sub, index) => {
+        const subjectName = sub.examId?.examName || `Exam ${index + 1}`;
+        const pct = sub.percentage || 0;
+        
+        if (!subjectMap[subjectName]) {
+            subjectMap[subjectName] = {
+                originalName: subjectName,
+                totalPct: 0,
+                count: 0,
+            };
+        }
+        subjectMap[subjectName].totalPct += pct;
+        subjectMap[subjectName].count += 1;
+    });
+
+    const uniqueSubjectsList = Object.values(subjectMap);
+    
+    let radarData = uniqueSubjectsList.map(item => {
+        const avgPct = item.totalPct / item.count;
+        const finalPct = Number.isInteger(avgPct) ? avgPct : Number(avgPct.toFixed(1));
+        return {
+            subject: item.originalName.length > 10 ? item.originalName.substring(0, 8) + '..' : item.originalName,
+            originalName: item.originalName,
+            fullMark: 100,
+            percentage: finalPct,
+            examCount: item.count
+        };
+    });
+
+    const realSubjectsCount = radarData.length;
 
     const stats = isTeacher
         ? [
@@ -290,178 +326,321 @@ const Dashboard = () => {
                 ))}
             </Grid>
 
-            {/* Recent Activity — students only */}
+            {/* Student Dashboard Content */}
             {!isTeacher && (
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={7}>
-                        <Card
-                            elevation={6}
-                            sx={{
-                                borderRadius: '18px',
-                                animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.35s both',
-                                transition: 'box-shadow 0.25s',
-                                '&:hover': { boxShadow: '0 0 0 2px rgba(108,99,255,0.25), 0 12px 36px rgba(108,99,255,0.12)' },
-                            }}
-                        >
-                            <Box sx={{ height: '4px', background: 'linear-gradient(90deg,#6C63FF,#00D4AA,#A78BFA,#6C63FF)', backgroundSize: '300% 100%', animation: 'gradientShift 4s linear infinite' }} />
-                            <CardContent sx={{ p: 3 }}>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Typography variant="h5" fontWeight={700}>Recent Results</Typography>
-                                    <IconClockHour4 size={20} color="#6C63FF" />
-                                </Stack>
-                                {recent.length === 0 ? (
-                                    <Box py={4} textAlign="center">
-                                        <Typography color="text.secondary">No exams taken yet. Start your first exam!</Typography>
+                <Grid container spacing={3} alignItems="flex-start">
+                    {/* LEFT COLUMN: Performance Radar (Like the image) */}
+                    <Grid item xs={12} md={5} lg={4}>
+                        <Stack spacing={3}>
+                            {/* Performance Radar Card */}
+                            <Card
+                                elevation={6}
+                                sx={{
+                                    borderRadius: '18px',
+                                    bgcolor: 'background.paper',
+                                    animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.35s both',
+                                    border: '1px solid rgba(0,0,0,0.05)',
+                                }}
+                            >
+                                <Box sx={{ height: '4px', background: 'linear-gradient(90deg,#00D4AA,#6C63FF,#A78BFA,#00D4AA)', backgroundSize: '300% 100%', animation: 'gradientShift 4s linear infinite' }} />
+                                <CardContent sx={{ p: 0 }}>
+                                    <Box p={3} pb={1}>
+                                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={0.5}>
+                                            <Stack direction="row" alignItems="center" spacing={1.5}>
+                                                <Avatar sx={{ width: 32, height: 32, background: 'linear-gradient(135deg,#6C63FF,#A78BFA)' }}>
+                                                    <IconChartBar size={18} color="#fff" />
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="subtitle1" fontWeight={800} color="text.primary" sx={{ fontFamily: "'Inter', sans-serif" }}>
+                                                        Performance Radar
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Tap points for details
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            <Chip
+                                                label={`${avgScore}% avg`}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: 'rgba(0, 212, 170, 0.15)',
+                                                    color: '#009E7E',
+                                                    fontWeight: 800,
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(0, 212, 170, 0.3)',
+                                                    fontFamily: "'Inter', sans-serif"
+                                                }}
+                                            />
+                                        </Stack>
                                     </Box>
-                                ) : (
-                                    <Stack divider={<Divider />}>
-                                        {recent.map((sub, i) => <ResultRow key={sub._id} sub={sub} idx={i} />)}
+
+                                    {/* Radar Chart Render */}
+                                    {radarData.length > 0 ? (
+                                        <Box sx={{ width: '100%', height: 280, position: 'relative' }}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <RadarChart cx="50%" cy="50%" outerRadius="60%" data={radarData}>
+                                                    <PolarGrid stroke="rgba(0,0,0,0.08)" gridType="polygon" />
+                                                    <PolarAngleAxis 
+                                                        dataKey="subject" 
+                                                        tick={{ fill: 'rgba(0,0,0,0.7)', fontSize: 10, fontWeight: 600 }} 
+                                                    />
+                                                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                                    <Radar 
+                                                        name="Avg Score" 
+                                                        dataKey="percentage" 
+                                                        stroke="#6C63FF" 
+                                                        strokeWidth={2}
+                                                        fill="#6C63FF" 
+                                                        fillOpacity={0.15} 
+                                                        dot={{ r: 3, fill: "#6C63FF", strokeWidth: 1, stroke: "#fff" }}
+                                                        activeDot={{ r: 5, fill: "#fff", stroke: "#6C63FF", strokeWidth: 2 }}
+                                                    />
+                                                    <RechartsTooltip 
+                                                        contentStyle={{ borderRadius: '12px', border: '1px solid rgba(108,99,255,0.2)', background: '#fff', color: '#333', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
+                                                        itemStyle={{ fontWeight: 700, color: '#6C63FF' }}
+                                                        formatter={(value) => [`${value}%`, 'Avg Score']}
+                                                    />
+                                                </RadarChart>
+                                            </ResponsiveContainer>
+                                        </Box>
+                                    ) : (
+                                        <Box height={280} display="flex" alignItems="center" justifyContent="center">
+                                            <Typography color="text.secondary" variant="body2">No exam data available</Typography>
+                                        </Box>
+                                    )}
+                                    <Box pb={2}></Box>
+                                </CardContent>
+                            </Card>
+
+                            {/* Subjects Breakdown Card */}
+                            <Card
+                                elevation={6}
+                                sx={{
+                                    borderRadius: '18px',
+                                    bgcolor: 'background.paper',
+                                    animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.4s both',
+                                    border: '1px solid rgba(0,0,0,0.05)',
+                                    transition: 'box-shadow 0.25s',
+                                    '&:hover': { boxShadow: '0 0 0 2px rgba(108,99,255,0.25), 0 12px 36px rgba(108,99,255,0.12)' }
+                                }}
+                            >
+                                <Box sx={{ height: '4px', background: 'linear-gradient(90deg,#6C63FF,#00D4AA,#A78BFA,#6C63FF)', backgroundSize: '300% 100%', animation: 'gradientShift 4s linear infinite' }} />
+                                <CardContent sx={{ p: 3 }}>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                                        <Typography variant="h5" fontWeight={700}>Subjects Breakdown</Typography>
+                                        <IconBook size={20} color="#6C63FF" />
                                     </Stack>
-                                )}
-                            </CardContent>
-                        </Card>
+
+                                    <Stack direction="row" spacing={1} mb={3}>
+                                        <Chip label={`${realSubjectsCount} subjects`} size="small" sx={{ bgcolor: 'rgba(108,99,255,0.08)', color: '#6C63FF', fontWeight: 600 }} />
+                                        <Chip label={`${submissions.length} exams`} size="small" sx={{ bgcolor: 'rgba(108,99,255,0.08)', color: '#6C63FF', fontWeight: 600 }} />
+                                    </Stack>
+
+                                    <Box 
+                                        sx={{ 
+                                            maxHeight: 250, 
+                                            overflowY: 'auto', 
+                                            pr: 1, 
+                                            '&::-webkit-scrollbar': { width: '5px' }, 
+                                            '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(108,99,255,0.2)', borderRadius: '10px' } 
+                                        }}
+                                    >
+                                        <Stack spacing={1}>
+                                            {radarData.filter(item => !item.isHidden).map((item, index) => (
+                                                <Box 
+                                                    key={index} 
+                                                    sx={{ 
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                                                        bgcolor: 'rgba(108,99,255,0.04)', p: 1.5, borderRadius: '10px',
+                                                        transition: 'background 0.2s', '&:hover': { bgcolor: 'rgba(108,99,255,0.08)' }
+                                                    }}
+                                                >
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={700} color="text.primary">{item.originalName}</Typography>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>{item.examCount} {item.examCount > 1 ? 'exams' : 'exam'}</Typography>
+                                                    </Box>
+                                                    <Typography variant="body2" fontWeight={800} color={item.percentage >= 70 ? '#10B981' : item.percentage >= 50 ? '#F59E0B' : '#EF4444'}>
+                                                        {item.percentage}%
+                                                    </Typography>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Stack>
                     </Grid>
 
-                    {/* Progress Banner */}
-                    <Grid item xs={12} md={5}>
-                        <Card
-                            elevation={6}
-                            sx={{
-                                borderRadius: '18px',
-                                background: 'linear-gradient(135deg,#1a0547 0%,#302B63 50%,#0a3d70 100%)',
-                                animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.45s both',
-                            }}
-                        >
-                            <CardContent sx={{ p: 3 }}>
-                                <Typography variant="h5" fontWeight={700} color="#fff" mb={1}>
-                                    Your Progress 🎯
-                                </Typography>
-                                <Typography variant="body2" color="rgba(255,255,255,0.7)" mb={3}>
-                                    Keep going! Consistency is the key to mastery.
-                                </Typography>
-
-                                {/* Average Score bar */}
-                                <Box mb={2}>
-                                    <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                                        <Typography variant="caption" color="rgba(255,255,255,0.8)">Average Score</Typography>
-                                        <Typography variant="caption" fontWeight={700} color="#fff">{avgScore}%</Typography>
+                    {/* RIGHT COLUMN: Progress & Recent Activity */}
+                    <Grid item xs={12} md={7} lg={8}>
+                        <Stack spacing={3}>
+                            
+                            {/* Overall Progress Status */}
+                            <Card
+                                elevation={6}
+                                sx={{
+                                    borderRadius: '18px',
+                                    background: 'linear-gradient(135deg,#1a0547 0%,#302B63 50%,#0a3d70 100%)',
+                                    animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.45s both',
+                                }}
+                            >
+                                <CardContent sx={{ p: 3 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="space-between" spacing={2} mb={2}>
+                                        <Box>
+                                            <Typography variant="h5" fontWeight={700} color="#fff" mb={0.5}>
+                                                Overall Master Progress 🎯
+                                            </Typography>
+                                            <Typography variant="body2" color="rgba(255,255,255,0.7)">
+                                                Consistency is the key to mastery. Keep it up!
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ background: 'rgba(255,255,255,0.1)', p: 1.5, borderRadius: '12px', backdropFilter: 'blur(10px)', textAlign: 'center', minWidth: 120 }}>
+                                            <Typography variant="caption" color="rgba(255,255,255,0.7)" display="block">Overall Score</Typography>
+                                            <Typography variant="h4" color="#00D4AA" fontWeight={800}>{avgScore}%</Typography>
+                                        </Box>
                                     </Stack>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={avgScore}
-                                        sx={{
-                                            height: 8, borderRadius: 4,
-                                            bgcolor: 'rgba(255,255,255,0.15)',
-                                            '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg,#00D4AA,#6C63FF)', borderRadius: 4 },
-                                        }}
-                                    />
-                                </Box>
 
-                                {/* Exams completed */}
-                                <Box mb={2}>
-                                    <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                                        <Typography variant="caption" color="rgba(255,255,255,0.8)">Exams Completed</Typography>
-                                        <Typography variant="caption" fontWeight={700} color="#fff">{submissions.length}</Typography>
+                                    <Box mb={2}>
+                                        <Stack direction="row" justifyContent="space-between" mb={0.5}>
+                                            <Typography variant="caption" color="rgba(255,255,255,0.8)">Study Goal Progress</Typography>
+                                            <Typography variant="caption" fontWeight={700} color="#fff">{Math.min((submissions.length / Math.max(exams.length, 1)) * 100, 100).toFixed(0)}%</Typography>
+                                        </Stack>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={Math.min((submissions.length / Math.max(exams.length, 1)) * 100, 100)}
+                                            sx={{
+                                                height: 10, borderRadius: 5,
+                                                bgcolor: 'rgba(255,255,255,0.15)',
+                                                '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg,#00D4AA,#6C63FF)', borderRadius: 5 },
+                                            }}
+                                        />
+                                    </Box>
+
+                                    <Box
+                                        mt={2}
+                                        p={1.5}
+                                        sx={{ background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}
+                                    >
+                                        <Typography variant="body2" color="#fff" fontWeight={500} textAlign="center">
+                                            {avgScore >= 75
+                                                ? '🏆 Outstanding! You are dominating the exams.'
+                                                : avgScore >= 40
+                                                    ? '✅ Good job! Pushing steadily towards the top.'
+                                                    : submissions.length === 0
+                                                        ? '🚀 Take your first exam to view your stats!'
+                                                        : '💪 Keep practicing, improvement takes time!'}
+                                        </Typography>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+
+                            {/* Recent Results */}
+                            <Card
+                                elevation={6}
+                                sx={{
+                                    borderRadius: '18px',
+                                    animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.5s both',
+                                    transition: 'box-shadow 0.25s',
+                                    '&:hover': { boxShadow: '0 0 0 2px rgba(108,99,255,0.25), 0 12px 36px rgba(108,99,255,0.12)' }
+                                }}
+                            >
+                                <Box sx={{ height: '4px', background: 'linear-gradient(90deg,#6C63FF,#00D4AA,#A78BFA,#6C63FF)', backgroundSize: '300% 100%', animation: 'gradientShift 4s linear infinite' }} />
+                                <CardContent sx={{ p: 3 }}>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                                        <Typography variant="h5" fontWeight={700}>Recent Activity</Typography>
+                                        <IconClockHour4 size={20} color="#6C63FF" />
                                     </Stack>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={Math.min((submissions.length / Math.max(exams.length, 1)) * 100, 100)}
-                                        sx={{
-                                            height: 8, borderRadius: 4,
-                                            bgcolor: 'rgba(255,255,255,0.15)',
-                                            '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg,#F59E0B,#EC4899)', borderRadius: 4 },
-                                        }}
-                                    />
-                                </Box>
+                                    {recent.length === 0 ? (
+                                        <Box py={4} textAlign="center">
+                                            <Typography color="text.secondary">No exams taken yet. Start your first exam!</Typography>
+                                        </Box>
+                                    ) : (
+                                        <Box 
+                                            sx={{ 
+                                                maxHeight: 280, 
+                                                overflowY: 'auto', 
+                                                pr: 1, 
+                                                '&::-webkit-scrollbar': { width: '5px' }, 
+                                                '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(108, 99, 255, 0.25)', borderRadius: '10px' } 
+                                            }}
+                                        >
+                                            <Stack divider={<Divider />}>
+                                                {recent.map((sub, i) => <ResultRow key={sub._id} sub={sub} idx={i} />)}
+                                            </Stack>
+                                        </Box>
+                                    )}
+                                </CardContent>
+                            </Card>
 
-                                <Box
-                                    mt={3}
-                                    p={2}
-                                    sx={{ background: 'rgba(255,255,255,0.08)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}
-                                >
-                                    <Typography variant="body2" color="rgba(255,255,255,0.9)" fontWeight={500} textAlign="center">
-                                        {avgScore >= 75
-                                            ? '🏆 Outstanding! You\'re in the top tier!'
-                                            : avgScore >= 60
-                                                ? '✅ Good job! Keep pushing to reach excellence.'
-                                                : submissions.length === 0
-                                                    ? '🚀 Take your first exam to see your stats!'
-                                                    : '💪 Keep practicing — you\'re improving every day!'}
-                                    </Typography>
-                                </Box>
-                            </CardContent>
-                        </Card>
+                            {/* Upcoming Exams */}
+                            {(() => {
+                                const upcomingList = exams
+                                    .filter((e) => e.liveDate && new Date(e.liveDate) > new Date())
+                                    .sort((a, b) => new Date(a.liveDate) - new Date(b.liveDate));
+                                return (
+                                    <Card
+                                        elevation={6}
+                                        sx={{
+                                            borderRadius: '18px',
+                                            animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.55s both',
+                                            transition: 'box-shadow 0.25s',
+                                            '&:hover': { boxShadow: '0 0 0 2px rgba(168,85,247,0.25), 0 12px 36px rgba(168,85,247,0.12)' },
+                                        }}
+                                    >
+                                        <Box sx={{ height: '4px', background: 'linear-gradient(90deg,#A855F7,#EC4899,#F59E0B,#A855F7)', backgroundSize: '300% 100%', animation: 'gradientShift 4s linear infinite' }} />
+                                        <CardContent sx={{ p: 3 }}>
+                                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                                                <Stack direction="row" alignItems="center" spacing={1}>
+                                                    <IconCalendarEvent size={22} color="#A855F7" />
+                                                    <Typography variant="h5" fontWeight={700}>Upcoming Exams</Typography>
+                                                </Stack>
+                                                <Chip
+                                                    label={`${upcomingList.length} scheduled`}
+                                                    size="small"
+                                                    sx={{ bgcolor: 'rgba(168,85,247,0.10)', color: '#7C3AED', fontWeight: 700 }}
+                                                />
+                                            </Stack>
+
+                                            {upcomingList.length === 0 ? (
+                                                <Box py={4} textAlign="center">
+                                                    <Typography color="text.secondary" variant="body2">
+                                                        🎉 No upcoming exams right now. Enjoy the break!
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
+                                                <Stack divider={<Divider />}>
+                                                    {upcomingList.map((exam, i) => (
+                                                        <UpcomingExamRow key={exam._id} exam={exam} idx={i} />
+                                                    ))}
+                                                </Stack>
+                                            )}
+
+                                            {upcomingList.length > 0 && (
+                                                <Box
+                                                    component="a"
+                                                    href="/exam"
+                                                    mt={2}
+                                                    display="block"
+                                                    textAlign="center"
+                                                    sx={{
+                                                        color: '#A855F7',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.85rem',
+                                                        textDecoration: 'none',
+                                                        '&:hover': { textDecoration: 'underline' },
+                                                    }}
+                                                >
+                                                    View All Active Exams →
+                                                </Box>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })()}
+                        </Stack>
                     </Grid>
                 </Grid>
             )}
-
-            {/* Upcoming Exams — students only */}
-            {!isTeacher && (() => {
-                const upcomingList = exams
-                    .filter((e) => e.liveDate && new Date(e.liveDate) > new Date())
-                    .sort((a, b) => new Date(a.liveDate) - new Date(b.liveDate));
-                return (
-                    <Box mt={3}>
-                        <Card
-                            elevation={6}
-                            sx={{
-                                borderRadius: '18px',
-                                animation: 'fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.55s both',
-                                transition: 'box-shadow 0.25s',
-                                '&:hover': { boxShadow: '0 0 0 2px rgba(168,85,247,0.25), 0 12px 36px rgba(168,85,247,0.12)' },
-                            }}
-                        >
-                            <Box sx={{ height: '4px', background: 'linear-gradient(90deg,#A855F7,#EC4899,#F59E0B,#A855F7)', backgroundSize: '300% 100%', animation: 'gradientShift 4s linear infinite' }} />
-                            <CardContent sx={{ p: 3 }}>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Stack direction="row" alignItems="center" spacing={1}>
-                                        <IconCalendarEvent size={22} color="#A855F7" />
-                                        <Typography variant="h5" fontWeight={700}>Upcoming Exams</Typography>
-                                    </Stack>
-                                    <Chip
-                                        label={`${upcomingList.length} scheduled`}
-                                        size="small"
-                                        sx={{ bgcolor: 'rgba(168,85,247,0.10)', color: '#7C3AED', fontWeight: 700 }}
-                                    />
-                                </Stack>
-
-                                {upcomingList.length === 0 ? (
-                                    <Box py={4} textAlign="center">
-                                        <Typography color="text.secondary" variant="body2">
-                                            🎉 No upcoming exams right now. Enjoy the break!
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <Stack divider={<Divider />}>
-                                        {upcomingList.map((exam, i) => (
-                                            <UpcomingExamRow key={exam._id} exam={exam} idx={i} />
-                                        ))}
-                                    </Stack>
-                                )}
-
-                                {upcomingList.length > 0 && (
-                                    <Box
-                                        component="a"
-                                        href="/exam"
-                                        mt={2}
-                                        display="block"
-                                        textAlign="center"
-                                        sx={{
-                                            color: '#A855F7',
-                                            fontWeight: 600,
-                                            fontSize: '0.85rem',
-                                            textDecoration: 'none',
-                                            '&:hover': { textDecoration: 'underline' },
-                                        }}
-                                    >
-                                        View All Active Exams →
-                                    </Box>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </Box>
-                );
-            })()}
 
             {/* Teacher panel */}
             {isTeacher && (
@@ -562,6 +741,19 @@ const Dashboard = () => {
                                                         }}
                                                     >
                                                         <IconBook size={18} />
+                                                    </IconButton>
+                                                </Tooltip>
+
+                                                <Tooltip title="Edit Exam">
+                                                    <IconButton
+                                                        color="warning"
+                                                        onClick={() => navigate(`/edit-exam/${exam._id}`)}
+                                                        sx={{
+                                                            bgcolor: 'rgba(245,158,11,0.1)',
+                                                            '&:hover': { bgcolor: 'rgba(245,158,11,0.2)' }
+                                                        }}
+                                                    >
+                                                        <IconEdit size={18} />
                                                     </IconButton>
                                                 </Tooltip>
 

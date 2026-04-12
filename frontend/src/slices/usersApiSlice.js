@@ -52,6 +52,20 @@ export const userApiSlice = apiSlice.injectEndpoints({
         body: data,
       }),
     }),
+    sendMobileOtp: builder.mutation({
+      query: (data) => ({
+        url: `${USERS_URL}/send-mobile-otp`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    verifyMobileOtp: builder.mutation({
+      query: (data) => ({
+        url: `${USERS_URL}/verify-mobile-otp`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -63,4 +77,6 @@ export const {
   useForgotPasswordMutation,
   useVerifyOtpMutation,
   useResetPasswordMutation,
+  useSendMobileOtpMutation,
+  useVerifyMobileOtpMutation,
 } = userApiSlice;

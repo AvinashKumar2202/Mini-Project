@@ -8,7 +8,9 @@ const store = configureStore({
     [apiSlice.reducerPath]: apiSlice.reducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(apiSlice.middleware),
-  devTools: true,
+  // Only enable Redux DevTools in development — removes serializable-check overhead in production
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
 export default store;
+

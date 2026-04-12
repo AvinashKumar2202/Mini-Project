@@ -155,6 +155,31 @@ const UserProfile = () => {
                                             </Typography>
                                         </Box>
                                     </Stack>
+
+                                    {/* Specific ID (Student/Teacher) */}
+                                    <Stack direction="row" alignItems="center" spacing={2}>
+                                        <Box
+                                            sx={{
+                                                backgroundColor: 'error.light',
+                                                borderRadius: '12px',
+                                                p: 1.5,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <IconUser size={24} color="#f44336" />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="body2" color="textSecondary">
+                                                {userInfo?.role === 'teacher' ? 'Teacher ID' : 'Student UID'}
+                                            </Typography>
+                                            <Typography variant="h6" fontWeight="600">
+                                                {userInfo?.role === 'teacher' ? (userInfo?.teacherId || 'N/A') : (userInfo?.universityId || 'N/A')}
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+
                                 </Stack>
 
                                 <Divider sx={{ my: 3 }} />

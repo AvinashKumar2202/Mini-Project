@@ -40,9 +40,13 @@ export default function MobileCamPage() {
 
             let stream;
             try {
-                // 1. Try rear camera explicitly
+                // 1. Try rear camera with high-res for wide field of view
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' } },
+                    video: { 
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
                     audio: false,
                 });
             } catch (err) {
@@ -216,7 +220,7 @@ export default function MobileCamPage() {
                     <video
                         ref={videoRef}
                         autoPlay playsInline muted
-                        style={{ width: '100%', minHeight: '240px', objectFit: 'cover', display: 'block', background: '#0a0a14' }}
+                        style={{ width: '100%', minHeight: '240px', objectFit: 'contain', display: 'block', background: '#0a0a14' }}
                     />
                     {connected && (
                         <Box

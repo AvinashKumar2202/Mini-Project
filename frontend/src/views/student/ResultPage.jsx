@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Typography, Box, Card, CardContent, Button, Stack,
   Chip, Container, GlobalStyles, Avatar,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PageContainer from 'src/components/container/PageContainer';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
-import { IconShare, IconHome, IconBook } from '@tabler/icons-react';
+import { IconShare, IconHome, IconBook, IconDownload } from '@tabler/icons-react';
 import { toast } from 'react-toastify';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { jsPDF } from 'jspdf';
+import { IconCertificate } from '@tabler/icons-react';
 
 /* ─── Animated ring ──────────────────────────────────────────── */
 const ScoreRingStyles = () => (
@@ -27,6 +31,14 @@ const ScoreRingStyles = () => (
       '@keyframes confettiFall': {
         '0%': { transform: 'translateY(-20px) rotate(0deg)', opacity: 1 },
         '100%': { transform: 'translateY(80px) rotate(360deg)', opacity: 0 },
+      },
+      '@media print': {
+        '.no-print': {
+          display: 'none !important',
+        },
+        body: {
+          background: '#fff !important',
+        },
       },
     }}
   />
@@ -112,15 +124,95 @@ const ResultPage = () => {
     return <Navigate to="/dashboard" />;
   }
   const state = location.state || {};
-  const { score = 0, totalQuestions = 0, examName = 'Exam', examDuration = 0 } = state;
+  const { 
+    score = 0, 
+    totalQuestions = 0, 
+    examName = 'Exam', 
+    examDuration = 0,
+    correctAnswersCount = 0,
+    incorrectAnswersCount = 0,
+    unattemptedCount = 0,
+    answerReport = []
+  } = state;
+
   const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
-  const passingScore = Math.ceil((totalQuestions * 60) / 100);
+  const passingScore = Math.ceil((totalQuestions * 40) / 100);
   const isPassed = score >= passingScore;
-  const wrong = totalQuestions - score;
+
+  const displayScore = Number.isInteger(score) ? score : Number(score).toFixed(2);
+
+  const pieData = [
+    { name: 'Correct', value: correctAnswersCount, color: '#00D4AA' },
+    { name: 'Incorrect', value: incorrectAnswersCount, color: '#FF6B6B' },
+    { name: 'Unattempted', value: unattemptedCount, color: '#A0A0A0' },
+  ].filter(item => item.value > 0);
 
   const handleShare = () => {
-    const text = `📝 ${examName}\n✅ Score: ${score}/${totalQuestions} (${percentage}%)\n${isPassed ? '🏆 PASSED' : '❌ FAILED'}\nTested on SAAN AI Exam Platform`;
+    const text = `📝 ${examName}\n✅ Score: ${displayScore}/${totalQuestions} (${percentage}%)\n${isPassed ? '🏆 PASSED' : '❌ FAILED'}\nTested on SAAN AI Exam Platform`;
     navigator.clipboard.writeText(text).then(() => toast.success('Result copied to clipboard!'));
+  };
+
+  const generateCertificate = () => {
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Border
+    doc.setDrawColor(108, 99, 255); // #6C63FF
+    doc.setLineWidth(2);
+    doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+    doc.setLineWidth(0.5);
+    doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+
+    // Content
+    doc.setTextColor(108, 99, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(40);
+    doc.text('CERTIFICATE', pageWidth / 2, 45, { align: 'center' });
+    doc.setFontSize(20);
+    doc.text('OF ACHIEVEMENT', pageWidth / 2, 55, { align: 'center' });
+
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'normal');
+    doc.text('This is to certify that', pageWidth / 2, 75, { align: 'center' });
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(30);
+    doc.setFont('helvetica', 'bolditalic');
+    doc.text(userInfo?.name || 'Student', pageWidth / 2, 95, { align: 'center' });
+
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'normal');
+    doc.text('has successfully completed the exam:', pageWidth / 2, 115, { align: 'center' });
+
+    doc.setTextColor(0, 212, 170); // #00D4AA
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text(examName, pageWidth / 2, 130, { align: 'center' });
+
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`with a brilliant score of ${percentage}% (${displayScore}/${totalQuestions})`, pageWidth / 2, 145, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth / 2, 165, { align: 'center' });
+    doc.text('Platform: SAAN AI PROCTORED EXAM', pageWidth / 2, 172, { align: 'center' });
+
+    // Footer decoration
+    doc.setDrawColor(0, 212, 170);
+    doc.setLineWidth(1);
+    doc.line(pageWidth / 2 - 40, 150, pageWidth / 2 + 40, 150);
+
+    doc.save(`${userInfo?.name || 'student'}_certificate.pdf`);
+    toast.success('Certificate downloaded successfully!');
   };
 
   return (
@@ -186,20 +278,57 @@ const ResultPage = () => {
                     Duration: <strong>{examDuration} mins</strong>
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Passing mark: <strong>{passingScore}/{totalQuestions} (60%)</strong>
+                    Passing mark: <strong>{passingScore}/{totalQuestions} (40%)</strong>
                   </Typography>
                 </Box>
               </Stack>
 
-              {/* Score breakdown */}
-              <Stack direction="row" spacing={2} mb={3}>
-                <StatPill label="Correct" value={score} color="#00D4AA" />
-                <StatPill label="Wrong" value={wrong} color="#FF6B6B" />
-                <StatPill label="Total" value={totalQuestions} color="#6C63FF" />
-              </Stack>
+              {/* Score breakdown & Pie Chart */}
+              <Box mb={3} sx={{ bgcolor: 'rgba(0,0,0,0.02)', borderRadius: '16px', py: 2, border: '1px solid rgba(0,0,0,0.05)' }}>
+                {pieData.length > 0 && (
+                  <Box sx={{ width: '100%', height: 180 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          innerRadius={55}
+                          outerRadius={75}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} 
+                        />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '0.8rem', fontWeight: 600 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
+                )}
+                
+                <Stack direction="row" spacing={2} mx={3} mt={pieData.length > 0 ? 1 : 0}>
+                  <StatPill label="Final Score" value={displayScore} color="#6C63FF" />
+                  <StatPill label="Correct" value={correctAnswersCount} color="#00D4AA" />
+                  <StatPill label="Incorrect" value={incorrectAnswersCount} color="#FF6B6B" />
+                </Stack>
+              </Box>
 
               {/* Action buttons */}
-              <Stack direction="row" spacing={2} justifyContent="center">
+              <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap" sx={{ gap: 1 }} className="no-print">
+                {isPassed && (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<IconCertificate size={18} />}
+                    onClick={generateCertificate}
+                    sx={{ borderRadius: '12px', px: 3, fontWeight: 700, bgcolor: '#00D4AA', '&:hover': { bgcolor: '#00B894' } }}
+                  >
+                    Certificate
+                  </Button>
+                )}
                 <Button
                   variant="contained"
                   color="primary"
@@ -207,7 +336,7 @@ const ResultPage = () => {
                   onClick={() => navigate('/exam')}
                   sx={{ borderRadius: '12px', px: 3, fontWeight: 700 }}
                 >
-                  More Exams
+                  Exams
                 </Button>
                 <Button
                   variant="outlined"
@@ -216,7 +345,7 @@ const ResultPage = () => {
                   onClick={() => navigate('/')}
                   sx={{ borderRadius: '12px', px: 3, fontWeight: 700 }}
                 >
-                  Dashboard
+                  Home
                 </Button>
                 <Button
                   variant="text"
@@ -227,9 +356,67 @@ const ResultPage = () => {
                 >
                   Share
                 </Button>
+                <Button
+                  variant="text"
+                  color="secondary"
+                  startIcon={<IconDownload size={18} />}
+                  onClick={() => window.print()}
+                  sx={{ borderRadius: '12px', fontWeight: 700 }}
+                >
+                  Print
+                </Button>
               </Stack>
             </CardContent>
           </Card>
+
+          {/* Detailed Question Report */}
+          {answerReport.length > 0 && (
+            <Box mt={4} className="detailed-report">
+              <Typography variant="h5" fontWeight={800} mb={2} textAlign="center" color="text.primary">
+                Detailed Performance Report
+              </Typography>
+              <TableContainer component={Paper} elevation={6} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+                <Table size="small" aria-label="question report">
+                  <TableHead sx={{ background: 'linear-gradient(90deg, rgba(108,99,255,0.08), rgba(0,212,170,0.08))' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 800, py: 1.5, fontSize: '0.95rem' }}>Question #</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, py: 1.5, fontSize: '0.95rem' }}>Result</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {answerReport.map((res, index) => {
+                      const ansStatus = typeof res === 'string' ? res : res.status;
+                      const ansDetail = typeof res === 'object' && res.detail ? res.detail : null;
+
+                      return (
+                      <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' } }}>
+                        <TableCell component="th" scope="row" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                          Question {index + 1}
+                          {ansDetail && (
+                            <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5, fontStyle: 'italic' }}>
+                              {ansDetail}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Chip 
+                            label={ansStatus} 
+                            size="small" 
+                            sx={{ 
+                              fontWeight: 700, fontSize: '0.72rem', px: 1, height: 24,
+                              bgcolor: ansStatus === 'Correct' ? 'rgba(0,212,170,0.15)' : ansStatus === 'Incorrect' ? 'rgba(255,107,107,0.15)' : 'rgba(160,160,160,0.15)',
+                              color: ansStatus === 'Correct' ? '#009E7E' : ansStatus === 'Incorrect' ? '#CC2020' : '#666',
+                            }} 
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )})}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
         </Box>
       </Container>
     </PageContainer>

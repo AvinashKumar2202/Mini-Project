@@ -15,7 +15,7 @@ import { toast } from 'react-toastify';
 import Loader from './Loader';
 
 const userValidationSchema = yup.object({
-  email: yup.string().email('Enter a valid email').required('Email is required'),
+  email: yup.string().required('Username or Email is required'),
   password: yup.string().min(2).required('Password is required'),
 });
 const initialUserValues = { email: '', password: '' };

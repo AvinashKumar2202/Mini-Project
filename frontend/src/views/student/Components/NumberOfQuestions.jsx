@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import Grid from '@mui/material/Grid';
 import Avatar from '@mui/material/Avatar';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 
 const NumberOfQuestions = ({
   questionLength,
@@ -20,11 +19,6 @@ const NumberOfQuestions = ({
     { length: totalQuestions },
     (_, index) => index + 1
   );
-
-  const rows = [];
-  for (let i = 0; i < questionNumbers.length; i += 5) {
-    rows.push(questionNumbers.slice(i, i + 5));
-  }
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   const [timer, setTimer] = useState(0);
@@ -86,65 +80,60 @@ const NumberOfQuestions = ({
         px={3}
         width="100%"
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">
+        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+          <Typography variant="subtitle1" fontWeight={600}>
             Total Questions: {totalQuestions}
           </Typography>
 
           <Typography
-            variant="h6"
+            variant="subtitle1"
             color={timer < 60 ? 'error' : 'textPrimary'}
             fontWeight="bold"
           >
             ⏳ Time Left: {formatTime(timer)}
           </Typography>
 
-          <Button variant="contained" onClick={submitTest} color="error">
+          <Button variant="contained" onClick={submitTest} color="error" size="small">
             Finish Test
           </Button>
         </Stack>
 
-        <Stack direction="row" alignItems="center" justifyContent="flex-start" mt={1}>
-          <Typography variant="body1" fontWeight="bold">
-            Score: {score} / {totalQuestions}
-          </Typography>
-        </Stack>
+        <Chip
+          label="Test in Progress"
+          size="small"
+          sx={{ mt: 1.5, fontWeight: 700, bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF' }}
+        />
+
       </Box>
 
       {/* Legend */}
       <Box px={3} mt={2}>
-        <Stack direction="row" spacing={2} mb={2}>
-          <Typography><span style={{ color: '#1976d2' }}>■</span> Current</Typography>
-          <Typography><span style={{ color: '#2e7d32' }}>■</span> Answered</Typography>
-          <Typography><span style={{ color: '#d32f2f' }}>■</span> Not Answered</Typography>
-          <Typography><span style={{ color: '#fbc02d' }}>■</span> Review</Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap mb={2}>
+          <Typography variant="body2"><span style={{ color: '#1976d2' }}>■</span> Current</Typography>
+          <Typography variant="body2"><span style={{ color: '#2e7d32' }}>■</span> Answered</Typography>
+          <Typography variant="body2"><span style={{ color: '#d32f2f' }}>■</span> Not Answered</Typography>
+          <Typography variant="body2"><span style={{ color: '#fbc02d' }}>■</span> Review</Typography>
         </Stack>
       </Box>
 
       {/* Question Grid */}
-      <Box p={3} maxHeight="270px" overflow="auto">
-        <Grid container spacing={1}>
-          {rows.map((row, rowIndex) => (
-            <Grid key={rowIndex} item xs={12}>
-              <Stack direction="row">
-                {row.map((questionNumber) => (
-                  <Avatar
-                    key={questionNumber}
-                    variant="rounded"
-                    sx={{
-                      bgcolor: getQuestionColor(questionNumber - 1),
-                      cursor: 'pointer',
-                      border: currentQuestionIndex === questionNumber - 1 ? '2px solid white' : 'none'
-                    }}
-                    onClick={() => setCurrentQuestionIndex(questionNumber - 1)} // Enabled navigation
-                  >
-                    {questionNumber}
-                  </Avatar>
-                ))}
-              </Stack>
-            </Grid>
+      <Box p={3} maxHeight="270px" sx={{ overflowY: 'auto', overflowX: 'hidden' }}>
+        <Box display="flex" flexWrap="wrap" gap={1}>
+          {questionNumbers.map((questionNumber) => (
+            <Avatar
+              key={questionNumber}
+              variant="rounded"
+              sx={{
+                bgcolor: getQuestionColor(questionNumber - 1),
+                cursor: 'pointer',
+                border: currentQuestionIndex === questionNumber - 1 ? '2px solid white' : 'none'
+              }}
+              onClick={() => setCurrentQuestionIndex(questionNumber - 1)}
+            >
+              {questionNumber}
+            </Avatar>
           ))}
-        </Grid>
+        </Box>
       </Box>
     </>
   );

@@ -6,6 +6,7 @@ import {
   IconListCheck,
   IconReportAnalytics,
   IconLifebuoy,
+  IconTrophy,
 } from '@tabler/icons-react';
 
 import { uniqueId } from 'lodash';
@@ -30,6 +31,12 @@ const Menuitems = [
     title: 'Exams',
     icon: IconBook,
     href: '/exam',
+  },
+  {
+    id: uniqueId(),
+    title: 'Leaderboard',
+    icon: IconTrophy,
+    href: '/leaderboard',
   },
   {
     id: uniqueId(),

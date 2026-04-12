@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
     Box, Grid, Card, CardContent, Typography, Stack, Avatar, Chip,
-    TextField, InputAdornment, IconButton, Divider, Paper,
-    List, ListItemButton, ListItemIcon, ListItemText, Button, Tab, Tabs,
+    TextField, IconButton, Divider, Paper,
+    List, ListItemButton, ListItemIcon, ListItemText, Button,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Badge, Tooltip,
+    Tooltip,
 } from '@mui/material';
 import {
     IconSend, IconRobot, IconUser, IconBulb, IconBook,
@@ -14,9 +14,23 @@ import {
     IconListCheck, IconReportAnalytics, IconTrash, IconRefresh,
 } from '@tabler/icons-react';
 import PageContainer from 'src/components/container/PageContainer';
+import { useSendChatMessageMutation } from 'src/slices/chatApiSlice';
+import { toast } from 'react-toastify';
 
 /* ─── Knowledge Base: Student Topics ────────────────────────────────── */
 const STUDENT_KB = [
+    {
+        keywords: ['negative marking', 'minus marks', 'wrong answer penalty', 'negative marks'],
+        answer: '📉 **Negative Marking:**\n\nIf enabled by your teacher, incorrect answers will deduct marks from your total. The penalty (e.g. -0.5 or -1) is shown on the exam instructions page. Skipping a question results in **0 marks** (no penalty). Always double-check before choosing!',
+    },
+    {
+        keywords: ['internet disconnected', 'wifi lost', 'offline', 'no internet'],
+        answer: '🌐 **Internet issues?**\n\n- don\'t worry! Your progress is saved locally and synced every 30 seconds.\n- If you disconnect, keep the tab open. Once internet returns, click **Sync** or refresh.\n- If you can\'t reconnect before the timer ends, contact your teacher immediately.',
+    },
+    {
+        keywords: ['subjective question', 'theory answer', 'long answer', 'typing answer'],
+        answer: '✍️ **Subjective Questions:**\n\n- Type your answer in the provided text area.\n- These questions are **not auto-graded**. Your teacher will review and grade them manually.\n- Your final score will update only after the teacher completes the review.',
+    },
     {
         keywords: ['exam not loading', 'exam load', 'page blank', 'blank page', 'stuck loading'],
         answer: '🔄 **Exam Not Loading?**\n\n1. Refresh the page (F5 or Ctrl+R).\n2. Clear browser cache: Ctrl+Shift+Delete → Clear cache.\n3. Switch to **Chrome** or **Edge** (best compatibility).\n4. Disable ad-blockers or extensions temporarily.\n5. Check your internet connection.\n\nIf the issue persists, click **"🚨 Report an Issue"** on your exam page.',
@@ -58,6 +72,18 @@ const STUDENT_KB = [
 /* ─── Knowledge Base: Teacher Topics ────────────────────────────────── */
 const TEACHER_KB = [
     {
+        keywords: ['export results', 'download csv', 'export data', 'get excel'],
+        answer: '📊 **Exporting Results:**\n\n1. Go to **Exam Logs**.\n2. Click the **"Download CSV"** button at the top-right.\n3. This exports a full list of student scores, percentages, and basic proctoring data to an Excel-friendly format.',
+    },
+    {
+        keywords: ['manual grading', 'grade subjective', 'review answers', 'mark subjective'],
+        answer: '✍️ **Manual Grading Guide:**\n\n1. Go to **Exam Logs** → click **View Details** (eye icon) for a student.\n2. Locate subjective answers.\n3. Click **"Submit Score"** after entering marks for those specific questions.\n4. The student\'s final score will automatically recalculate.',
+    },
+    {
+        keywords: ['monitor live', 'realtime monitor', 'live proctoring', 'who is taking exam'],
+        answer: '👀 **Real-time Monitoring:**\n\n- The **Exam Log** updates live. You can see who is currently in an exam session and their last sync time.\n- If **Third Eye** is active, you can click on the proctoring row to see their mobile camera view in real-time.',
+    },
+    {
         keywords: ['create exam', 'how to create', 'new exam', 'make exam', 'set up exam'],
         answer: '📝 **How to Create an Exam:**\n\n1. Click **"Create Exam"** in the sidebar.\n2. Fill in:\n   - **Exam Name** — e.g. "Math Mid-Term"\n   - **Duration** — in minutes\n   - **Live Date** — when students can start\n   - **Dead Date** — when the exam closes\n   - **Total Questions** — how many questions you plan to add\n3. Toggle **Third Eye** ON if you want mobile room monitoring.\n4. Click **Create** — the exam appears in the list immediately.\n\n✅ After creating, go to **Add Questions** to add MCQs.',
     },
@@ -83,11 +109,20 @@ const TEACHER_KB = [
     },
     {
         keywords: ['hello', 'hi', 'hey', 'help'],
-        answer: '👋 **Hi Teacher! I\'m SAAN Assistant.**\n\nI can help you with:\n- 📝 Creating exams & adding questions\n- 📋 Viewing exam logs & results\n- 📱 Setting up Third Eye (mobile proctoring)\n- 🚨 Viewing student issue reports\n- 🗑️ Managing exams\n\nJust type your question!',
+        answer: '👋 **Hi Teacher! I\'m SAAN Assistant.**\nI can help you with:\n- 📝 Creating exams & adding questions\n- 📋 Viewing exam logs & results\n- 📱 Setting up Third Eye (mobile proctoring)\n- 🚨 Viewing student issue reports\n- 🗑️ Managing exams\nJust type your question!',
     },
 ];
 
-const STUDENT_GREETING = '👋 **Hi! I\'m SAAN Assistant.**\n\nI can help you with:\n- 📷 Camera & technical issues\n- ⏱️ Exam timer & submission\n- 🔑 Password & login problems\n- ⚠️ Exam violations & warnings\n- 📊 Checking results\n\nType your question or pick a topic!';
+const STUDENT_GREETING = `👋 **Hi! I'm SAAN Assistant.** 
+
+I can help you with:
+- 📖 **How to attempt the exam**
+- 📷 **Camera & technical issues**
+- ⏱️ **Exam timer & submission**
+- 🔑 **Password & login problems**
+- 📊 **Checking results**
+
+Type your question or pick a topic from the left!`;
 
 const findAnswer = (input, isTeacher) => {
     const lower = input.toLowerCase();
@@ -101,6 +136,11 @@ const findAnswer = (input, isTeacher) => {
 /* ─── Message bubble ─────────────────────────────────────────────────── */
 const MsgBubble = ({ msg }) => {
     const isBot = msg.role === 'bot';
+    const handleCopy = (t) => {
+        navigator.clipboard.writeText(t);
+        toast.success("Copied to clipboard!");
+    };
+
     return (
         <Stack direction={isBot ? 'row' : 'row-reverse'} spacing={1.5} alignItems="flex-start" mb={2}>
             <Avatar sx={{
@@ -115,15 +155,28 @@ const MsgBubble = ({ msg }) => {
                 border: isBot ? '1px solid rgba(108,99,255,0.12)' : '1px solid rgba(0,212,170,0.15)',
                 borderRadius: isBot ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
                 px: 2, py: 1.5,
+                position: 'relative',
+                '&:hover .copy-btn': { opacity: 1 }
             }}>
                 {msg.text.split('\n').map((line, i) => {
+                    if (line.trim() === '') return <Box key={i} sx={{ height: '8px' }} />;
                     const parts = line.split(/\*\*(.*?)\*\*/g);
                     return (
-                        <Typography key={i} variant="body2" sx={{ lineHeight: 1.7, mb: 0.2 }}>
+                        <Typography key={i} variant="body2" sx={{ lineHeight: 1.6, mb: 0.5 }}>
                             {parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}
                         </Typography>
                     );
                 })}
+                {isBot && (
+                    <IconButton 
+                        size="small" 
+                        className="copy-btn"
+                        onClick={() => handleCopy(msg.text)}
+                        sx={{ position: 'absolute', top: 2, right: 2, opacity: 0, transition: '0.2s' }}
+                    >
+                        <Typography variant="caption" sx={{ fontSize: '10px' }}>📋</Typography>
+                    </IconButton>
+                )}
             </Box>
         </Stack>
     );
@@ -171,7 +224,7 @@ const SupportPage = () => {
 
     const topics = isTeacher ? TEACHER_TOPICS : STUDENT_TOPICS;
     const initGreeting = isTeacher
-        ? '👋 **Hi Teacher! I\'m SAAN Assistant.**\n\nI can help you with:\n- 📝 Creating exams & adding questions\n- 📋 Viewing exam logs & results\n- 📱 Third Eye mobile proctoring setup\n- 🚨 Viewing student issue reports\n\nType your question or pick a topic from the left!'
+        ? '👋 **Hi Teacher! I\'m SAAN Assistant.**\nI can help you with:\n- 📝 Creating exams & adding questions\n- 📋 Viewing exam logs & results\n- 📱 Third Eye mobile proctoring setup\n- 🚨 Viewing student issue reports\nType your question or pick a topic from the left!'
         : STUDENT_GREETING;
 
     const [messages, setMessages] = useState([{ role: 'bot', text: initGreeting }]);
@@ -191,16 +244,41 @@ const SupportPage = () => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [isTeacher, messages, isTyping]);
 
-    const sendMessage = (text) => {
+    const [sendChatMessage] = useSendChatMessageMutation();
+
+    const sendMessage = async (text) => {
         const msg = text || input.trim();
         if (!msg) return;
+        
         setInput('');
-        setMessages((prev) => [...prev, { role: 'user', text: msg }]);
+        
+        // Append user's message immediately for UI responsiveness
+        const newMessages = [...messages, { role: 'user', text: msg }];
+        setMessages(newMessages);
         setIsTyping(true);
-        setTimeout(() => {
-            setMessages((prev) => [...prev, { role: 'bot', text: findAnswer(msg, isTeacher) }]);
+        
+        try {
+            // Keep history length reasonable, filter out initial generic greeting if wanted, 
+            // but let's send the last 10 messages to give context 
+            const recentHistory = newMessages.slice(-10);
+            
+            const res = await sendChatMessage({
+                messages: recentHistory,
+                userRole: userInfo?.role || 'student',
+                userName: userInfo?.name || 'User'
+            }).unwrap();
+
+            setMessages((prev) => [...prev, { role: 'bot', text: res.reply }]);
+        } catch (error) {
+            console.error(error);
+            // Display real error from backend or a generic fallback
+            const errDetail = error.data?.message || "Please try again later.";
+            let fallbackMsg = `🚨 **SAAN Assistant is having trouble connecting.**\n\n${errDetail}\n\n---\n**Static Search Result:**\n`;
+            fallbackMsg += findAnswer(msg, isTeacher);
+            setMessages((prev) => [...prev, { role: 'bot', text: fallbackMsg }]);
+        } finally {
             setIsTyping(false);
-        }, 650);
+        }
     };
 
     const clearReports = () => {
@@ -285,10 +363,11 @@ const SupportPage = () => {
                     <Card elevation={4} sx={{
                         borderRadius: '18px',
                         animation: 'fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both',
+                        height: '100%',
                     }}>
                         <Box sx={{ height: '4px', background: isTeacher ? 'linear-gradient(90deg,#F59E0B,#F97316)' : 'linear-gradient(90deg,#6C63FF,#A855F7)' }} />
                         <CardContent sx={{ p: 2.5 }}>
-                            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                            <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                                 <IconBulb size={20} color={isTeacher ? '#F59E0B' : '#6C63FF'} />
                                 <Typography variant="h6" fontWeight={700}>
                                     {isTeacher ? 'Teacher Topics' : 'Browse Topics'}
@@ -299,7 +378,7 @@ const SupportPage = () => {
                                     <React.Fragment key={t.label}>
                                         <ListItemButton
                                             onClick={() => sendMessage(t.q)}
-                                            sx={{ borderRadius: '12px', mb: 0.5, py: 1.2, '&:hover': { bgcolor: 'rgba(108,99,255,0.06)' } }}
+                                            sx={{ borderRadius: '12px', py: 1.2, '&:hover': { bgcolor: 'rgba(108,99,255,0.06)' } }}
                                         >
                                             <ListItemIcon sx={{ minWidth: 36 }}>
                                                 {typeof t.icon === 'string'
@@ -333,14 +412,19 @@ const SupportPage = () => {
                                 <Avatar sx={{ width: 38, height: 38, background: 'linear-gradient(135deg,#6C63FF,#A855F7)', borderRadius: '12px' }}>
                                     <IconRobot size={20} color="#fff" />
                                 </Avatar>
-                                <Box>
-                                    <Typography variant="subtitle1" fontWeight={700}>SAAN Assistant</Typography>
-                                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#00D4AA', animation: 'pulseGlow 2s ease-in-out infinite' }} />
-                                        <Typography variant="caption" color="text.secondary">Online • Always available</Typography>
-                                    </Stack>
-                                </Box>
-                                <Box flex={1} />
+                                <Stack direction="row" alignItems="center" justifyContent="space-between" flex={1}>
+                                    <Box>
+                                        <Typography variant="h6" fontWeight={700}>SAAN Assistant</Typography>
+                                        <Typography variant="caption" sx={{ color: 'success.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} /> Online • Always available
+                                        </Typography>
+                                    </Box>
+                                    <IconButton onClick={() => setMessages([{ role: 'bot', text: initGreeting }])} color="error" size="small">
+                                        <Tooltip title="Clear Chat">
+                                            <IconTrash size={18} />
+                                        </Tooltip>
+                                    </IconButton>
+                                </Stack>
                                 <Chip label="AI Powered" size="small" sx={{ bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF', fontWeight: 700, fontSize: '0.68rem' }} />
                             </Stack>
                         </Box>

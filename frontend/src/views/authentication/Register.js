@@ -64,9 +64,20 @@ const regSchema = yup.object({
     .oneOf([yup.ref('password'), null], 'Passwords must match')
     .required('Confirm your password'),
   role: yup.string().required('Select a role'),
+  universityId: yup.string().when('role', {
+    is: 'student',
+    then: (schema) => schema.required('University/School ID is required'),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  teacherId: yup.string().when('role', {
+    is: 'teacher',
+    then: (schema) => schema.required('Teacher ID is required'),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  mobileNumber: yup.string().required('Mobile Number is required'),
 });
 
-const regInitial = { name: '', email: '', password: '', confirmPassword: '', role: 'student' };
+const regInitial = { name: '', email: '', password: '', confirmPassword: '', role: 'student', universityId: '', teacherId: '', mobileNumber: '' };
 
 /* ─── Component ──────────────────────────────────────────────────────── */
 const Register = () => {
@@ -83,13 +94,13 @@ const Register = () => {
 
   useEffect(() => { if (userInfo) navigate('/'); }, [navigate, userInfo]);
 
-  const handleSubmit = async ({ name, email, password, confirmPassword, role }) => {
+  const handleSubmit = async ({ name, email, password, confirmPassword, role, universityId, teacherId, mobileNumber }) => {
     if (password !== confirmPassword) {
       toast.error('Passwords do not match!');
       return;
     }
     try {
-      const res = await register({ name, email, password, role }).unwrap();
+      const res = await register({ name, email, password, role, universityId, teacherId, mobileNumber }).unwrap();
       dispatch(setCredentials({ ...res }));
       navigate('/');
     } catch (err) {
@@ -103,19 +114,27 @@ const Register = () => {
 
       <Box
         sx={{
-          minHeight: '100vh',
+          minHeight: '100dvh',
           display: 'flex',
           position: 'relative',
-          overflow: 'hidden',
-          background: 'linear-gradient(135deg, #050014 0%, #0c0330 35%, #060d22 70%, #000 100%)',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          backgroundColor: '#050014',
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            radial-gradient(circle at 50% 50%, #0c0330 0%, #050014 100%)
+          `,
+          backgroundSize: '40px 40px, 40px 40px, 100% 100%',
+          backgroundPosition: 'center center',
         }}
       >
         {/* ── Aurora blobs ──────────────────────────────────── */}
-        <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        <Box sx={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           {[
-            { top: '60%', left: '-10%', size: 550, color: 'rgba(236,72,153,0.22)', anim: 'regAuroraOne 16s ease-in-out infinite' },
-            { top: '-15%', left: '50%', size: 480, color: 'rgba(108,99,255,0.24)', anim: 'regAuroraTwo 13s ease-in-out infinite' },
-            { top: '20%', left: '75%', size: 380, color: 'rgba(0,212,170,0.16)', anim: 'regAuroraOne 19s ease-in-out infinite reverse' },
+            { top: '50%', left: '-10%', size: 600, color: 'rgba(236,72,153,0.3)', anim: 'regAuroraOne 14s ease-in-out infinite' },
+            { top: '-10%', left: '40%', size: 500, color: 'rgba(108,99,255,0.3)', anim: 'regAuroraTwo 12s ease-in-out infinite' },
+            { top: '30%', left: '70%', size: 450, color: 'rgba(0,212,170,0.25)', anim: 'regAuroraOne 18s ease-in-out infinite reverse' },
           ].map((b, i) => (
             <Box
               key={i}
@@ -151,15 +170,15 @@ const Register = () => {
             position: 'relative', zIndex: 1, width: '100%',
             display: 'flex', flexDirection: { xs: 'column', lg: 'row' },
             alignItems: 'center', justifyContent: 'center',
-            px: { xs: 2, lg: 0 }, py: { xs: 4, lg: 0 }, gap: { xs: 4, lg: 0 },
+            px: { xs: 2, lg: 0 }, py: { xs: 6, lg: 4 }, gap: { xs: 4, lg: 0 },
           }}
         >
           {/* ── LEFT: Register card ─────────────────────────── */}
           <Box
             sx={{
-              width: { xs: '100%', sm: 500 },
+              width: { xs: '100%', sm: 600, lg: 650 },
               flexShrink: 0,
-              px: { xs: 0, lg: 8 },
+              px: { xs: 0, lg: 6 },
               animation: 'regSlideLeft 0.75s cubic-bezier(0.22,1,0.36,1) 0.1s both',
             }}
           >

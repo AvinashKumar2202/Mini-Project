@@ -35,7 +35,7 @@ const ForgotPassword = () => {
 
     // shared state
     const [step, setStep] = useState(0);
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [resetToken, setResetToken] = useState('');
 
     // step-specific state
@@ -54,10 +54,10 @@ const ForgotPassword = () => {
     /* ── Step 1: Request OTP ─────────────────────────────────────────── */
     const handleSendOtp = async (e) => {
         e.preventDefault();
-        if (!email) return toast.error('Please enter your email.');
+        if (!identifier) return toast.error('Please enter your email or mobile number.');
         try {
-            await forgotPassword({ email }).unwrap();
-            toast.success('OTP sent! Check your inbox (and spam folder).');
+            const res = await forgotPassword({ identifier }).unwrap();
+            toast.success(res.message || 'OTP sent! Check your inbox or mobile device.');
             setStep(1);
         } catch (err) {
             toast.error(err?.data?.message || 'Failed to send OTP. Please try again.');
@@ -93,7 +93,7 @@ const ForgotPassword = () => {
         const code = otp.join('');
         if (code.length !== 6) return toast.error('Enter all 6 digits.');
         try {
-            const res = await verifyOtp({ email, otp: code }).unwrap();
+            const res = await verifyOtp({ identifier, otp: code }).unwrap();
             setResetToken(res.resetToken);
             toast.success('OTP verified! Set your new password.');
             setStep(2);
@@ -172,16 +172,16 @@ const ForgotPassword = () => {
                                 Forgot your password?
                             </Typography>
                             <Typography variant="body2" color="text.secondary" textAlign="center" mb={3}>
-                                Enter your registered email and we'll send you a 6-digit OTP.
+                                Enter your registered Email or Mobile Number and we'll send you a 6-digit OTP.
                             </Typography>
 
-                            <Typography variant="subtitle2" fontWeight={600} mb={0.5}>Email Address</Typography>
+                            <Typography variant="subtitle2" fontWeight={600} mb={0.5}>Email or Mobile Number</Typography>
                             <TextField
                                 fullWidth
-                                type="email"
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                type="text"
+                                placeholder="you@example.com or 1234567890"
+                                value={identifier}
+                                onChange={(e) => setIdentifier(e.target.value)}
                                 required
                                 InputProps={{
                                     startAdornment: (
@@ -232,7 +232,7 @@ const ForgotPassword = () => {
                             </Typography>
                             <Box display="flex" justifyContent="center" mb={3}>
                                 <Chip
-                                    label={email}
+                                    label={identifier}
                                     size="small"
                                     icon={<IconMail size={14} />}
                                     sx={{ bgcolor: 'rgba(108,99,255,0.08)', color: '#6C63FF', fontWeight: 600 }}
@@ -291,7 +291,7 @@ const ForgotPassword = () => {
                                     sx={{ color: 'primary.main', cursor: 'pointer', fontWeight: 600 }}
                                     onClick={() => { setOtp(['', '', '', '', '', '']); setStep(0); }}
                                 >
-                                    ← Change Email
+                                    ← Change Email/Mobile
                                 </Typography>
                                 <Typography
                                     variant="body2"
