@@ -7,13 +7,11 @@ import {
 import PageContainer from 'src/components/container/PageContainer';
 import DashboardCard from '../../components/shared/DashboardCard';
 import { useGetSubmissionByIdQuery } from 'src/slices/examApiSlice';
-import { useSelector } from 'react-redux';
-import { IconArrowLeft, IconCheck, IconX, IconQuestionMark } from '@tabler/icons-react';
+import { IconArrowLeft, IconCheck, IconX } from '@tabler/icons-react';
 
 const StudentSubmissionDetail = () => {
     const { submissionId } = useParams();
     const navigate = useNavigate();
-    const { userInfo } = useSelector((s) => s.auth);
 
     const { data: detail, isLoading, isError, error } = useGetSubmissionByIdQuery(submissionId, {
         skip: !submissionId
@@ -84,16 +82,12 @@ const StudentSubmissionDetail = () => {
                             
                             // Determinate logic
                             let isCorrectSelection = false;
-                            let correctOptionText = '';
-
                             if (q.type === 'subjective') {
                                 const provided = sAns?.answerText?.trim().toLowerCase() || '';
                                 const actual = q.correctAnswerText?.trim().toLowerCase() || '';
                                 isCorrectSelection = provided && actual && provided === actual;
-                                correctOptionText = q.correctAnswerText;
                             } else {
                                 const correctOpt = q.options?.find(o => o.isCorrect);
-                                correctOptionText = correctOpt?.optionText;
                                 if (sAns && sAns.selectedOptionId === correctOpt?._id?.toString()) {
                                     isCorrectSelection = true;
                                 }

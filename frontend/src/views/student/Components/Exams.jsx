@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Grid, Typography, Box, Stack, Chip, Divider, Avatar } from '@mui/material';
+import { Grid, Typography, Box, Stack, Chip, Divider } from '@mui/material';
 import PageContainer from 'src/components/container/PageContainer';
 import BlankCard from '../../../components/shared/BlankCard';
 import ExamCard from './ExamCard';

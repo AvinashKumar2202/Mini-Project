@@ -32,6 +32,14 @@ const Profile = () => {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { userInfo } = useSelector((state) => state.auth);
+
+  const getAvatar = () => {
+    if (userInfo?.gender === 'female') return `https://avatar.iran.liara.run/public/girl?username=${userInfo?.name}`;
+    if (userInfo?.gender === 'male') return `https://avatar.iran.liara.run/public/boy?username=${userInfo?.name}`;
+    if (userInfo?.gender === 'other') return `https://avatar.iran.liara.run/public?username=${userInfo?.name}`;
+    return ProfileImg;
+  };
 
   const [logoutApiCall] = useLogoutMutation();
 
@@ -58,7 +66,7 @@ const Profile = () => {
         onClick={handleClick2}
       >
         <Avatar
-          src={ProfileImg}
+          src={getAvatar()}
           alt={ProfileImg}
           sx={{
             width: 35,

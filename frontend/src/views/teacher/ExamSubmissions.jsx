@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Typography, Box, Card, CardContent, Table, TableBody,
+    Typography, Box, Card, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, Button, Stack, CircularProgress
 } from '@mui/material';
@@ -12,7 +12,7 @@ import { useGetExamSubmissionsQuery } from 'src/slices/examApiSlice';
 const ExamSubmissions = () => {
     const { examId } = useParams();
     const navigate = useNavigate();
-    const { data: submissions = [], isLoading, isError } = useGetExamSubmissionsQuery(examId);
+    const { data: submissions = [], isLoading } = useGetExamSubmissionsQuery(examId);
 
     if (isLoading) {
         return (

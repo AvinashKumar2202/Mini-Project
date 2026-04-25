@@ -64,6 +64,7 @@ const regSchema = yup.object({
     .oneOf([yup.ref('password'), null], 'Passwords must match')
     .required('Confirm your password'),
   role: yup.string().required('Select a role'),
+  gender: yup.string().required('Select a gender'),
   universityId: yup.string().when('role', {
     is: 'student',
     then: (schema) => schema.required('University/School ID is required'),
@@ -77,7 +78,7 @@ const regSchema = yup.object({
   mobileNumber: yup.string().required('Mobile Number is required'),
 });
 
-const regInitial = { name: '', email: '', password: '', confirmPassword: '', role: 'student', universityId: '', teacherId: '', mobileNumber: '' };
+const regInitial = { name: '', email: '', password: '', confirmPassword: '', role: 'student', gender: '', universityId: '', teacherId: '', mobileNumber: '' };
 
 /* ─── Component ──────────────────────────────────────────────────────── */
 const Register = () => {
@@ -94,13 +95,13 @@ const Register = () => {
 
   useEffect(() => { if (userInfo) navigate('/'); }, [navigate, userInfo]);
 
-  const handleSubmit = async ({ name, email, password, confirmPassword, role, universityId, teacherId, mobileNumber }) => {
+  const handleSubmit = async ({ name, email, password, confirmPassword, role, gender, universityId, teacherId, mobileNumber }) => {
     if (password !== confirmPassword) {
       toast.error('Passwords do not match!');
       return;
     }
     try {
-      const res = await register({ name, email, password, role, universityId, teacherId, mobileNumber }).unwrap();
+      const res = await register({ name, email, password, role, gender, universityId, teacherId, mobileNumber }).unwrap();
       dispatch(setCredentials({ ...res }));
       navigate('/');
     } catch (err) {

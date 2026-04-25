@@ -11,7 +11,6 @@ const Certificate = forwardRef(({ studentName, examName, percentage, date }, ref
                 height: '600px',
                 padding: '40px',
                 background: '#fff',
-                position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',

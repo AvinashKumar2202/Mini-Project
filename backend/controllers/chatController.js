@@ -49,7 +49,7 @@ export const handleChat = asyncHandler(async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-lite',
         systemInstruction: systemInstruction 
     });
 
@@ -63,24 +63,45 @@ export const handleChat = asyncHandler(async (req, res) => {
         formattedHistory.shift();
     }
 
-    const chat = model.startChat({
-        history: formattedHistory,
-        generationConfig: {
-            maxOutputTokens: 1000,
-            temperature: 0.7,
-        },
-    });
-
     const lastMessage = messages[messages.length - 1].text;
     
     try {
+        const chat = model.startChat({
+            history: formattedHistory,
+            generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+        });
         const result = await chat.sendMessage(lastMessage);
         const response = await result.response;
-        const replyText = response.text();
-        res.status(200).json({ reply: replyText });
+        res.status(200).json({ reply: response.text() });
     } catch (error) {
         console.error("Gemini API Error:", error.message || error);
         const errMsg = error.message || '';
+        
+        // Check for 503 High Demand
+        if (errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('overloaded')) {
+            try {
+                // Autoretry with an alternate model
+                console.log("503 Received. Attempting fallback to gemini-2.5-flash...");
+                const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction });
+                const fallbackChat = fallbackModel.startChat({
+                    history: formattedHistory,
+                    generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+                });
+                const result = await fallbackChat.sendMessage(lastMessage);
+                res.status(200).json({ reply: (await result.response).text() });
+                return;
+            } catch (fallbackError) {
+                console.error("Fallback Failed:", fallbackError.message);
+                const fbMsg = fallbackError.message || '';
+                if (fbMsg.includes('429') || fbMsg.includes('quota')) {
+                    res.status(429);
+                    throw new Error("⏳ AI rate limit reached. Please wait a minute and try again.");
+                }
+                res.status(503);
+                throw new Error("⏳ The AI models are currently experiencing high demand. Please try again in a few moments.");
+            }
+        }
+
         if (errMsg.includes('429') || errMsg.includes('quota')) {
             res.status(429);
             throw new Error("⏳ AI rate limit reached. Please wait a minute and try again.");

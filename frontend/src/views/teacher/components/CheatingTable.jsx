@@ -8,7 +8,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
   TextField,
   Select,
   MenuItem,
@@ -22,7 +21,7 @@ export default function CheatingTable() {
   const [cheatingLogs, setCheatingLogs] = useState([]);
 
   const { data: examsData } = useGetExamsQuery();
-  const { data: cheatingLogsData, isLoading } = useGetCheatingLogsQuery(selectedExamId);
+  const { data: cheatingLogsData } = useGetCheatingLogsQuery(selectedExamId);
 
   useEffect(() => {
     if (examsData && examsData.length > 0 && !selectedExamId) {

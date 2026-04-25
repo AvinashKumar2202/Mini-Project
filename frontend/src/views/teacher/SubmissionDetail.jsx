@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Typography, Box, Card, CardContent, Button, Stack,
-    Chip, Container, CircularProgress, Divider
+    Chip, CircularProgress
 } from '@mui/material';
 import { IconArrowLeft, IconCheck, IconX, IconDownload } from '@tabler/icons-react';
 import PageContainer from 'src/components/container/PageContainer';

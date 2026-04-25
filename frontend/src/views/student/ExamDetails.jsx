@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { IconArrowLeft } from '@tabler/icons-react';
-import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import { uniqueId } from 'lodash';
 import * as React from 'react';
@@ -43,7 +42,7 @@ const DescriptionAndInstructions = () => {
   const navigate = useNavigate();
 
   const { examId } = useParams();
-  const { data: questions, isLoading } = useGetQuestionsQuery(examId);
+  const { data: questions } = useGetQuestionsQuery(examId);
   const { data: exams = [] } = useGetExamsQuery();
   const { data: submissions = [] } = useGetMySubmissionsQuery();
 

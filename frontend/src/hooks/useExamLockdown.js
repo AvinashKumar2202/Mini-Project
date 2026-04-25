@@ -176,6 +176,7 @@ const useExamLockdown = (onAutoSubmit, isPaused = false) => {
         violations,
         maxViolations: MAX_VIOLATIONS,
         warningVisible,
+        isUrgentWarning,
         dismissWarning,
         isFullscreen,
     };

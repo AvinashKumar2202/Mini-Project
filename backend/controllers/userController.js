@@ -17,9 +17,9 @@ const transporter = nodemailer.createTransport({
 
 // REGISTER
 export const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, universityId, teacherId, mobileNumber } = req.body;
+  const { name, email, password, role, gender, universityId, teacherId, mobileNumber } = req.body;
 
-  if (!name || !email || !password || !mobileNumber) {
+  if (!name || !email || !password || !mobileNumber || !gender) {
     res.status(400);
     throw new Error("Please fill in all required fields");
   }
@@ -44,6 +44,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     email,
     password: hashedPassword,
     role,
+    gender,
     universityId: role === 'student' ? universityId : null,
     teacherId: role === 'teacher' ? teacherId : null,
     mobileNumber: mobileNumber,
@@ -61,6 +62,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    gender: user.gender,
     universityId: user.universityId,
     teacherId: user.teacherId,
     mobileNumber: user.mobileNumber,
@@ -143,6 +145,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    gender: user.gender,
     universityId: user.universityId,
     teacherId: user.teacherId,
     token: token,
@@ -306,6 +309,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   user.name = req.body.name || user.name;
   user.email = req.body.email || user.email;
   user.role = req.body.role || user.role;
+  user.gender = req.body.gender || user.gender;
 
   if (user.role === 'student') {
     user.universityId = req.body.universityId || user.universityId;
@@ -333,6 +337,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     name: updatedUser.name,
     email: updatedUser.email,
     role: updatedUser.role,
+    gender: updatedUser.gender,
     universityId: updatedUser.universityId,
     teacherId: updatedUser.teacherId,
     token: token,

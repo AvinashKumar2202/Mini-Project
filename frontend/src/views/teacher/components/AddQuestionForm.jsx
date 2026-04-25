@@ -366,14 +366,6 @@ const AddQuestionForm = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleSubmitQuestions = () => {
-    setQuestions([]);
-    setNewQuestion('');
-    setNewOptions(['', '', '', '']);
-    setCorrectOptions([false, false, false, false]);
-    setCorrectAnswerText('');
-  };
-
   const handleClearQuestions = async () => {
     if (!selectedExamId) {
       swal('', 'Please select an exam first.', 'error');

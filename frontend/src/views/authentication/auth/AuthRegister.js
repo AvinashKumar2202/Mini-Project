@@ -237,6 +237,34 @@ const AuthRegister = ({ formik, title, subtitle, subtext }) => {
             </Select>
           </Grid>
 
+          {/* Gender Selection */}
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="gender" mb="5px" display="block">
+              Gender
+            </Typography>
+            <Select
+              id="gender"
+              name="gender"
+              required
+              displayEmpty
+              value={values.gender}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={!!(touched.gender && errors.gender)}
+              fullWidth
+            >
+              <MenuItem value="" disabled>Select Gender</MenuItem>
+              <MenuItem value="male">Male</MenuItem>
+              <MenuItem value="female">Female</MenuItem>
+              <MenuItem value="other">Other</MenuItem>
+            </Select>
+            {touched.gender && errors.gender && (
+              <Typography variant="caption" sx={{ color: 'rgba(255,100,100,0.9)', mt: 0.5, display: 'block', ml: 1.5 }}>
+                {errors.gender}
+              </Typography>
+            )}
+          </Grid>
+
           {/* Conditional Fields for Student */}
           {values.role === 'student' && (
             <Grid item xs={12} sm={6}>

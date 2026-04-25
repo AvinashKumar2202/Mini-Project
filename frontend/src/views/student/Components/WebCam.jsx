@@ -1,13 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
-import * as tf from '@tensorflow/tfjs';
+import React, { useRef, useEffect } from 'react';
 import * as cocossd from '@tensorflow-models/coco-ssd';
 import Webcam from 'react-webcam';
-import { drawRect } from './utilities';
-
-import { Box, Card } from '@mui/material';
 import { toast } from 'react-toastify';
 
-export default function Home({ cheatingLog, updateCheatingLog }) {
+export default function Home({ updateCheatingLog }) {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const intervalRef = useRef(null);
@@ -52,8 +48,6 @@ export default function Home({ cheatingLog, updateCheatingLog }) {
 
       const obj = await net.detect(video);
       if (!isMounted.current) return;
-
-      const ctx = canvasRef.current?.getContext('2d');
 
       let person_count = 0;
       const now = Date.now();

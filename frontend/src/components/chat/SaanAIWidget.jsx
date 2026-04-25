@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
     Box, Fab, Zoom, Paper, Typography, Stack, Avatar, IconButton,
-    TextField, CircularProgress, Chip, Tooltip, Fade, Divider
+    TextField, Chip, Tooltip, Divider
 } from '@mui/material';
 import {
     IconMessageChatbot, IconX, IconSend, IconRobot, IconUser,
-    IconTrash, IconMinus, IconChevronRight
+    IconMinus
 } from '@tabler/icons-react';
 import { useSendChatMessageMutation } from 'src/slices/chatApiSlice';
 import { toast } from 'react-toastify';
